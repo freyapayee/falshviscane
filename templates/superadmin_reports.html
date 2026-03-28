@@ -27,8 +27,8 @@
                     Live Aggregates
                 </div>
                 <a class="btn light" href="/superadmin">
-                    <ion-icon name="arrow-back-outline"></ion-icon>
-                    Back to Home
+                    <ion-icon name="grid-outline"></ion-icon>
+                    Superadmin
                 </a>
                 <a class="btn light" href="/admin-logout">
                     <ion-icon name="power"></ion-icon>
@@ -49,6 +49,11 @@
                 <div class="stat-label">Total Predicted Yield</div>
                 <div class="stat-value">{{ report.total_predicted_yield }}</div>
                 <div class="stat-meta">Estimated TCH units</div>
+            </div>
+            <div class="stat-card accent-orange">
+                <div class="stat-label">Average Trash %</div>
+                <div class="stat-value">{{ report.avg_trash_pct }}%</div>
+                <div class="stat-meta">{{ report.total_scans }} scans analyzed</div>
             </div>
         </section>
 
@@ -71,6 +76,7 @@
                         <th>Maturity</th>
                         <th>TCH</th>
                         <th>LKG/TC</th>
+                        <th>Trash %</th>
                         <th>Captured</th>
                     </tr>
                 </thead>
@@ -83,12 +89,13 @@
                                 <td>{{ row.maturity_pct }}%</td>
                                 <td>{{ row.tch }}</td>
                                 <td>{{ row.lkg_tc }}</td>
+                                <td>{{ row.trash_pct }}%</td>
                                 <td>{{ row.created_at.strftime('%b %d, %Y') }}</td>
                             </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="6">No scan data available for reporting.</td>
+                            <td colspan="7">No scan data available for reporting.</td>
                         </tr>
                     {% endif %}
                 </tbody>

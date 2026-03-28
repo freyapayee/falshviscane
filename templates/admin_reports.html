@@ -23,8 +23,8 @@
             </div>
             <div class="header-actions">
                 <a class="btn light" href="/admin">
-                    <ion-icon name="arrow-back-outline"></ion-icon>
-                    Back to Home
+                    <ion-icon name="grid-outline"></ion-icon>
+                    Admin
                 </a>
                 <a class="btn light" href="/admin-logout">
                     <ion-icon name="power"></ion-icon>
@@ -53,6 +53,7 @@
                         <th>Avg Maturity</th>
                         <th>Avg TCH</th>
                         <th>Avg LKG/TC</th>
+                        <th>Avg Trash %</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -66,11 +67,12 @@
                                 <td>{{ row.avg_maturity }}%</td>
                                 <td>{{ row.avg_tch }}</td>
                                 <td>{{ row.avg_lkg_tc }}</td>
+                                <td>{{ row.avg_trash }}</td>
                             </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="7">No data available yet.</td>
+                            <td colspan="8">No data available yet.</td>
                         </tr>
                     {% endif %}
                 </tbody>

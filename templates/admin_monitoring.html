@@ -23,8 +23,8 @@
             </div>
             <div class="header-actions">
                 <a class="btn light" href="/admin">
-                    <ion-icon name="arrow-back-outline"></ion-icon>
-                    Back to Home
+                    <ion-icon name="grid-outline"></ion-icon>
+                    Admin
                 </a>
                 <a class="btn light" href="/admin-logout">
                     <ion-icon name="power"></ion-icon>
@@ -52,6 +52,7 @@
                         <th>TCH</th>
                         <th>LKG/TC</th>
                         <th>Bags</th>
+                        <th>Trash %</th>
                         <th>Status</th>
                         <th>Captured</th>
                     </tr>
@@ -66,6 +67,7 @@
                                 <td>{{ row.tch }}</td>
                                 <td>{{ row.lkg_tc }}</td>
                                 <td>{{ row.bags }}</td>
+                                <td>{{ row.trash_pct }}%</td>
                                 <td>
                                     <span class="tag {% if row.status == 'ready' %}success{% elif row.status == 'monitor' %}warning{% else %}alert{% endif %}">
                                         {{ row.status }}
@@ -76,7 +78,7 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="8">No scan data available.</td>
+                            <td colspan="9">No scan data available.</td>
                         </tr>
                     {% endif %}
                 </tbody>

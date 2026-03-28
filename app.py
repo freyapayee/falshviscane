@@ -192,7 +192,7 @@ def log_audit(action, user_id=None):
 def get_system_config():
     config = SystemConfig.query.first()
     if not config:
-        config = SystemConfig(system_name='VISCANE', maintenance_mode=False)
+        config = SystemConfig(system_name='CaneDustry', maintenance_mode=False)
         db.session.add(config)
         db.session.commit()
     return config
@@ -457,7 +457,7 @@ def admin_monitoring():
     scans = Scan.query.order_by(Scan.created_at.desc()).limit(50).all()
     monitoring_rows = []
     for scan in scans:
-        tch, lkg_tc, _ = estimate_scan_metrics(scan)
+        tch, lkg_tc, trash_pct = estimate_scan_metrics(scan)
         bags = round(tch * 20, 2)
         monitoring_rows.append({
             "plot_name": scan.plot_name,
@@ -467,6 +467,7 @@ def admin_monitoring():
             "tch": tch,
             "lkg_tc": lkg_tc,
             "bags": bags,
+            "trash_pct": trash_pct,
             "created_at": scan.created_at
         })
     return render_template('admin_monitoring.html', rows=monitoring_rows, current_admin=get_current_admin())
@@ -496,17 +497,19 @@ def admin_reports():
     scans = Scan.query.order_by(Scan.created_at.desc()).all()
     farmer_summary = {}
     for scan in scans:
-        tch, lkg_tc, _ = estimate_scan_metrics(scan)
+        tch, lkg_tc, trash_pct = estimate_scan_metrics(scan)
         entry = farmer_summary.setdefault(scan.user_id, {
             "count": 0,
             "total_maturity": 0,
             "total_tch": 0,
-            "total_lkg_tc": 0
+            "total_lkg_tc": 0,
+            "total_trash": 0
         })
         entry["count"] += 1
         entry["total_maturity"] += scan.maturity_pct
         entry["total_tch"] += tch
         entry["total_lkg_tc"] += lkg_tc
+        entry["total_trash"] += trash_pct
 
     rows = []
     for user_id, summary in farmer_summary.items():
@@ -521,7 +524,8 @@ def admin_reports():
             "scans": count,
             "avg_maturity": round(summary["total_maturity"] / count, 1) if count else 0,
             "avg_tch": round(summary["total_tch"] / count, 2) if count else 0,
-            "avg_lkg_tc": round(summary["total_lkg_tc"] / count, 2) if count else 0
+            "avg_lkg_tc": round(summary["total_lkg_tc"] / count, 2) if count else 0,
+            "avg_trash": round(summary["total_trash"] / count, 2) if count else 0
         })
 
     rows = sorted(rows, key=lambda item: item["scans"], reverse=True)
@@ -830,24 +834,29 @@ def superadmin_reports():
     rows = []
     total_tch = 0
     total_lkg_tc = 0
+    total_trash = 0
     for scan in scans:
-        tch, lkg_tc, _ = estimate_scan_metrics(scan)
+        tch, lkg_tc, trash_pct = estimate_scan_metrics(scan)
         total_tch += tch
         total_lkg_tc += lkg_tc
+        total_trash += trash_pct
         rows.append({
             "plot_name": scan.plot_name,
             "grade": scan.grade,
             "maturity_pct": scan.maturity_pct,
             "tch": tch,
             "lkg_tc": lkg_tc,
+            "trash_pct": trash_pct,
             "created_at": scan.created_at
         })
 
     avg_lkg_tc = round(total_lkg_tc / total_scans, 2) if total_scans else 0
+    avg_trash_pct = round(total_trash / total_scans, 2) if total_scans else 0
     total_predicted_yield = round(total_tch, 2) if total_scans else 0
 
     report = {
         "avg_lkg_tc": avg_lkg_tc,
+        "avg_trash_pct": avg_trash_pct,
         "total_predicted_yield": total_predicted_yield,
         "total_scans": total_scans
     }
@@ -872,10 +881,11 @@ def superadmin_reports_download():
         "Maturity %",
         "Estimated TCH",
         "Estimated LKG/TC",
+        "Estimated Trash %",
         "Created At"
     ])
     for scan in scans:
-        tch, lkg_tc, _ = estimate_scan_metrics(scan)
+        tch, lkg_tc, trash_pct = estimate_scan_metrics(scan)
         writer.writerow([
             scan.id,
             scan.plot_name,
@@ -883,6 +893,7 @@ def superadmin_reports_download():
             scan.maturity_pct,
             tch,
             lkg_tc,
+            trash_pct,
             scan.created_at.strftime('%Y-%m-%d %H:%M:%S')
         ])
 
