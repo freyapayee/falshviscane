@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16
+    container_name: viscane_postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: viscane_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    ports:
+      - "5001:5000"
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/viscane_db
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

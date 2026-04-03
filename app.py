@@ -17,9 +17,17 @@ from models import db, User, Admin, Scan, AuditLog, SystemConfig, Notification, 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('VISCANE_SECRET_KEY', 'change-this-key')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///viscane.db'
+database_url = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL') or 'sqlite:///viscane.db'
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
+
+def using_sqlite():
+    return app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite:')
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -33,68 +41,69 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 with app.app_context():
     db.create_all()
 
-    # SQLite doesn't auto-migrate. If the admin table exists from an older
-    # version, add the role column if it's missing.
-    try:
-        columns = [
-            row[1] for row in db.session.execute(db.text("PRAGMA table_info(admin)"))
-        ]
-        if "role" not in columns:
-            db.session.execute(
-                db.text("ALTER TABLE admin ADD COLUMN role VARCHAR(40) NOT NULL DEFAULT 'admin'")
-            )
-            db.session.commit()
-        if "is_archived" not in columns:
-            db.session.execute(
-                db.text("ALTER TABLE admin ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0")
-            )
-            db.session.commit()
-    except Exception:
-        db.session.rollback()
+    if using_sqlite():
+        # SQLite doesn't auto-migrate. If the table exists from an older
+        # version, add the missing columns in place.
+        try:
+            columns = [
+                row[1] for row in db.session.execute(db.text("PRAGMA table_info(admin)"))
+            ]
+            if "role" not in columns:
+                db.session.execute(
+                    db.text("ALTER TABLE admin ADD COLUMN role VARCHAR(40) NOT NULL DEFAULT 'admin'")
+                )
+                db.session.commit()
+            if "is_archived" not in columns:
+                db.session.execute(
+                    db.text("ALTER TABLE admin ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0")
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
-    try:
-        user_columns = [
-            row[1] for row in db.session.execute(db.text("PRAGMA table_info(user)"))
-        ]
-        if "province" not in user_columns:
-            db.session.execute(
-                db.text("ALTER TABLE user ADD COLUMN province VARCHAR(120)")
-            )
-            db.session.commit()
-        if "municipality" not in user_columns:
-            db.session.execute(
-                db.text("ALTER TABLE user ADD COLUMN municipality VARCHAR(120)")
-            )
-            db.session.commit()
-        if "barangay" not in user_columns:
-            db.session.execute(
-                db.text("ALTER TABLE user ADD COLUMN barangay VARCHAR(120)")
-            )
-            db.session.commit()
-        if "is_active" not in user_columns:
-            db.session.execute(
-                db.text("ALTER TABLE user ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1")
-            )
-            db.session.commit()
-        if "is_archived" not in user_columns:
-            db.session.execute(
-                db.text("ALTER TABLE user ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0")
-            )
-            db.session.commit()
-    except Exception:
-        db.session.rollback()
+        try:
+            user_columns = [
+                row[1] for row in db.session.execute(db.text("PRAGMA table_info(user)"))
+            ]
+            if "province" not in user_columns:
+                db.session.execute(
+                    db.text("ALTER TABLE user ADD COLUMN province VARCHAR(120)")
+                )
+                db.session.commit()
+            if "municipality" not in user_columns:
+                db.session.execute(
+                    db.text("ALTER TABLE user ADD COLUMN municipality VARCHAR(120)")
+                )
+                db.session.commit()
+            if "barangay" not in user_columns:
+                db.session.execute(
+                    db.text("ALTER TABLE user ADD COLUMN barangay VARCHAR(120)")
+                )
+                db.session.commit()
+            if "is_active" not in user_columns:
+                db.session.execute(
+                    db.text("ALTER TABLE user ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1")
+                )
+                db.session.commit()
+            if "is_archived" not in user_columns:
+                db.session.execute(
+                    db.text("ALTER TABLE user ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0")
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
-    try:
-        config_columns = [
-            row[1] for row in db.session.execute(db.text("PRAGMA table_info(system_config)"))
-        ]
-        if "model_filename" not in config_columns:
-            db.session.execute(
-                db.text("ALTER TABLE system_config ADD COLUMN model_filename VARCHAR(255)")
-            )
-            db.session.commit()
-    except Exception:
-        db.session.rollback()
+        try:
+            config_columns = [
+                row[1] for row in db.session.execute(db.text("PRAGMA table_info(system_config)"))
+            ]
+            if "model_filename" not in config_columns:
+                db.session.execute(
+                    db.text("ALTER TABLE system_config ADD COLUMN model_filename VARCHAR(255)")
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     try:
         if not SystemConfig.query.first():
@@ -103,40 +112,41 @@ with app.app_context():
     except Exception:
         db.session.rollback()
 
-    # Ensure scan table has ON DELETE CASCADE for user_id
-    try:
-        fk_rows = db.session.execute(text("PRAGMA foreign_key_list(scan)")).fetchall()
-        needs_cascade = True
-        for row in fk_rows:
-            # row tuple: (id, seq, table, from, to, on_update, on_delete, match)
-            if row[2] == "user" and row[3] == "user_id" and str(row[6]).lower() == "cascade":
-                needs_cascade = False
-                break
-        if needs_cascade and fk_rows:
-            db.session.execute(text("PRAGMA foreign_keys=OFF"))
-            db.session.execute(text("ALTER TABLE scan RENAME TO scan_old"))
-            db.session.execute(text("""
-                CREATE TABLE scan (
-                    id INTEGER PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    plot_name VARCHAR(80) NOT NULL,
-                    grade VARCHAR(2) NOT NULL,
-                    maturity_pct INTEGER NOT NULL,
-                    status VARCHAR(20) NOT NULL,
-                    created_at DATETIME NOT NULL,
-                    FOREIGN KEY(user_id) REFERENCES user (id) ON DELETE CASCADE
-                )
-            """))
-            db.session.execute(text("""
-                INSERT INTO scan (id, user_id, plot_name, grade, maturity_pct, status, created_at)
-                SELECT id, user_id, plot_name, grade, maturity_pct, status, created_at
-                FROM scan_old
-            """))
-            db.session.execute(text("DROP TABLE scan_old"))
-            db.session.execute(text("PRAGMA foreign_keys=ON"))
-            db.session.commit()
-    except Exception:
-        db.session.rollback()
+    if using_sqlite():
+        # Ensure scan table has ON DELETE CASCADE for user_id
+        try:
+            fk_rows = db.session.execute(text("PRAGMA foreign_key_list(scan)")).fetchall()
+            needs_cascade = True
+            for row in fk_rows:
+                # row tuple: (id, seq, table, from, to, on_update, on_delete, match)
+                if row[2] == "user" and row[3] == "user_id" and str(row[6]).lower() == "cascade":
+                    needs_cascade = False
+                    break
+            if needs_cascade and fk_rows:
+                db.session.execute(text("PRAGMA foreign_keys=OFF"))
+                db.session.execute(text("ALTER TABLE scan RENAME TO scan_old"))
+                db.session.execute(text("""
+                    CREATE TABLE scan (
+                        id INTEGER PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        plot_name VARCHAR(80) NOT NULL,
+                        grade VARCHAR(2) NOT NULL,
+                        maturity_pct INTEGER NOT NULL,
+                        status VARCHAR(20) NOT NULL,
+                        created_at DATETIME NOT NULL,
+                        FOREIGN KEY(user_id) REFERENCES user (id) ON DELETE CASCADE
+                    )
+                """))
+                db.session.execute(text("""
+                    INSERT INTO scan (id, user_id, plot_name, grade, maturity_pct, status, created_at)
+                    SELECT id, user_id, plot_name, grade, maturity_pct, status, created_at
+                    FROM scan_old
+                """))
+                db.session.execute(text("DROP TABLE scan_old"))
+                db.session.execute(text("PRAGMA foreign_keys=ON"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 def farmer_login_required(view):
     @wraps(view)
@@ -908,4 +918,4 @@ def superadmin_audit():
     return render_template('superadmin_audit.html', logs=logs, current_admin=get_current_admin())
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True)
