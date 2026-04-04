@@ -1318,6 +1318,10 @@ body.admin-layout .btn.primary {
     margin-top: 0;
 }
 
+.stat-inline .stat-select {
+    margin-top: 0;
+}
+
 @media (max-width: 900px) {
     .stats-grid {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1386,6 +1390,18 @@ body.admin-layout .btn.primary {
     align-items: center;
     gap: 12px;
     margin-bottom: 16px;
+}
+
+.admin-search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.admin-search-row .stat-input {
+    margin-top: 0;
 }
 
 .panel-title {

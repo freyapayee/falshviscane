@@ -77,9 +77,9 @@
                         <span class="result-icon">
                             <ion-icon name="bar-chart-outline"></ion-icon>
                         </span>
-                        TCH
+                        Hectares
                     </span>
-                    <span class="result-value">{{ tch_display }}</span>
+                    <span class="result-value">{{ hectares_display }}</span>
                 </div>
                 <div class="result-row result-highlight">
                     <span class="result-label">
@@ -91,6 +91,18 @@
                     <span class="result-value{% if predicted_lkg_tc_display == 'Pending' %} is-pending{% endif %}">
                         {{ predicted_lkg_tc_display }}
                         <span class="result-unit">LKG/TC</span>
+                    </span>
+                </div>
+                <div class="result-row result-highlight">
+                    <span class="result-label">
+                        <span class="result-icon">
+                            <ion-icon name="trending-up-outline"></ion-icon>
+                        </span>
+                        Predicted TC/HA
+                    </span>
+                    <span class="result-value{% if predicted_tc_ha_display == 'Pending' %} is-pending{% endif %}">
+                        {{ predicted_tc_ha_display }}
+                        <span class="result-unit">TC/HA</span>
                     </span>
                 </div>
             </div>

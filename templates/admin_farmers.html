@@ -79,11 +79,20 @@
                     </div>
                     <span class="badge"><ion-icon name="people-outline"></ion-icon>{{ users|length }} farmers</span>
                 </div>
+                <form class="admin-search-row" method="GET" action="/admin/farmers">
+                    <input class="stat-input" type="text" name="search" placeholder="Search by name, email, phone, or address" value="{{ search or '' }}">
+                    <button class="btn primary" type="submit">
+                        <ion-icon name="search-outline"></ion-icon>
+                        Search
+                    </button>
+                </form>
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Farmer</th>
-                            <th>Location</th>
+                            <th>Cellphone</th>
+                            <th>Registered Address</th>
+                            <th>Registered Date</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -96,7 +105,15 @@
                                         <strong>{{ user.fullname }}</strong><br>
                                         <span class="list-meta">{{ user.email }}</span>
                                     </td>
-                                    <td>{{ user.municipality or 'N/A' }}, {{ user.barangay or 'N/A' }}</td>
+                                    <td>{{ user.phone or 'N/A' }}</td>
+                                    <td>{{ user.barangay or 'N/A' }}, {{ user.municipality or 'N/A' }}, {{ user.province or 'N/A' }}</td>
+                                    <td>
+                                        {% if user.created_at %}
+                                            {{ user.created_at.strftime('%b %d, %Y') }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if user.is_active %}
                                             <span class="tag success">Active</span>
@@ -129,7 +146,7 @@
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="4">No farmers registered yet.</td>
+                                <td colspan="6">No farmers registered yet.</td>
                             </tr>
                         {% endif %}
                     </tbody>

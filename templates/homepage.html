@@ -87,6 +87,24 @@
                 </select>
             </div>
             <div class="stat-card">
+                <div class="stat-label">Number of Fertilizer</div>
+                <select class="stat-select" name="fertilizer_count">
+                    <option value="" disabled selected>Select number</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Ratoon Stage</div>
+                <select class="stat-select" name="ratoon_stage">
+                    <option value="" disabled selected>Select number</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+            </div>
+            <div class="stat-card">
                 <div class="stat-label">Infected by RSSI?</div>
                 <select class="stat-select" name="rssi_infected">
                     <option value="" disabled selected>Select</option>
@@ -95,9 +113,21 @@
                 </select>
             </div>
             <div class="stat-card stat-card-tons">
-                <div class="stat-label">Tons (per hectare)</div>
+                <div class="stat-label">Hectares</div>
                 <div class="stat-inline">
-                    <input class="stat-input" id="tons-per-hectare" type="text" name="tons_per_hectare" inputmode="decimal" placeholder="Enter tons per hectare">
+                    <select class="stat-select" name="hectares">
+                        <option value="" disabled selected>Select hectares</option>
+                        <option value="Less than 1 hectare">Less than 1 hectare</option>
+                        <option value="1 hectare">1 hectare</option>
+                        <option value="1-2">1-2</option>
+                        <option value="2">2</option>
+                        <option value="2-3">2-3</option>
+                        <option value="3">3</option>
+                        <option value="3-4">3-4</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="More than 5">More than 5</option>
+                    </select>
                     <button class="stat-action" id="tons-calc-btn" type="submit">Calculate</button>
                 </div>
                 <div class="stat-helper" id="tons-calc-result" aria-live="polite"></div>
@@ -259,7 +289,6 @@
     </div>
     <script>
         (() => {
-            const input = document.getElementById('tons-per-hectare');
             const openCameraBtn = document.getElementById('open-camera-btn');
             const cameraOverlay = document.getElementById('camera-overlay');
             const closeCameraBtn = document.getElementById('close-camera-btn');
@@ -268,16 +297,6 @@
             const cameraFlash = document.getElementById('camera-flash');
             let activeStream = null;
             let isStarting = false;
-
-            const sanitizeValue = (value) => {
-                let cleaned = value.replace(/[^0-9.]/g, '');
-                const parts = cleaned.split('.');
-                if (parts.length > 2) {
-                    cleaned = `${parts[0]}.${parts.slice(1).join('')}`;
-                }
-                const [whole, decimal] = cleaned.split('.');
-                return decimal === undefined ? whole : `${whole}.${decimal.slice(0, 2)}`;
-            };
 
             const setCameraButtonState = (isLoading) => {
                 if (!openCameraBtn) {
@@ -381,15 +400,6 @@
                     });
                 });
             };
-
-            if (input) {
-                input.addEventListener('input', () => {
-                    const sanitized = sanitizeValue(input.value);
-                    if (sanitized !== input.value) {
-                        input.value = sanitized;
-                    }
-                });
-            }
 
             if (openCameraBtn) {
                 openCameraBtn.addEventListener('click', () => {
