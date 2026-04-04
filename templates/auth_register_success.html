@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>VISCANE | Registration Successful</title>
+</head>
+<body>
+    <div class="card fade-in auth-success-card">
+        <div class="auth-header">
+            <div class="auth-logo-circle">
+                <img src="{{ url_for('static', filename='logo.jpg') }}" alt="VISCANE Logo" class="auth-logo-img">
+            </div>
+            <h2 class="auth-title">VISCANE</h2>
+            <p class="auth-subtitle">An Edge-Based AI for Sugarcane Quality Grading</p>
+        </div>
+
+        <div class="auth-success-box">
+            <div class="auth-success-icon">
+                <ion-icon name="checkmark-outline"></ion-icon>
+            </div>
+            <h3 class="auth-success-title">You have successfully registered</h3>
+            <p class="auth-success-text">Welcome to VISCANE, {{ user.fullname }}. Your account is ready.</p>
+        </div>
+
+        <a class="primary-btn success-cta-btn" href="/homepage">
+            Proceed to home
+        </a>
+
+        <div class="auth-footer">
+            <a href="/" class="auth-back-link">&larr; Back to Selection</a>
+        </div>
+    </div>
+</body>
+</html>

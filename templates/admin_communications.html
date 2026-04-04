@@ -93,7 +93,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Farmer ID</th>
+                        <th>Farmer</th>
                         <th>Message</th>
                         <th>Received</th>
                     </tr>
@@ -102,7 +102,7 @@
                     {% if feedback %}
                         {% for entry in feedback %}
                             <tr>
-                                <td>{{ entry.user_id if entry.user_id else 'Unknown' }}</td>
+                                <td>{{ entry.farmer_label }}</td>
                                 <td>{{ entry.message }}</td>
                                 <td>{{ entry.created_at.strftime('%b %d, %I:%M %p') }}</td>
                             </tr>

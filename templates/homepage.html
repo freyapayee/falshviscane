@@ -35,6 +35,13 @@
     </header>
 
     <main class="dashboard-container fade-in">
+        {% if message %}
+            <div class="form-success">{{ message }}</div>
+        {% endif %}
+        {% if error %}
+            <div class="form-error">{{ error }}</div>
+        {% endif %}
+
         <section class="hero-panel">
             <div class="hero-content">
                 <div class="hero-badge">
@@ -263,6 +270,23 @@
                     </div>
                 </div>
             </div>
+        </section>
+
+        <section class="panel">
+            <form method="POST" action="/farmer/feedback">
+                <div class="panel-header">
+                    <div>
+                        <h3 class="panel-title">Feedback Box</h3>
+                        <p class="panel-subtitle">Tell us your suggestions or support concerns</p>
+                    </div>
+                    <button class="btn primary" type="submit">
+                        <ion-icon name="send-outline"></ion-icon>
+                        Submit Feedback
+                    </button>
+                </div>
+                <div class="stat-label">Your Feedback</div>
+                <textarea class="stat-input" name="feedback_message" rows="4" placeholder="Write your feedback here..." required></textarea>
+            </form>
         </section>
 
     <div class="footer-link">VISCANE Farmer Portal | AI Assisted Grading</div>

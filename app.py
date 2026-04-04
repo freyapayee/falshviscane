@@ -282,6 +282,9 @@ def homepage():
         yield_est = "Low"
         harvest_window = "14-18 days"
 
+    message = request.args.get('message')
+    error = request.args.get('error')
+
     return render_template(
         'homepage.html',
         user=user,
@@ -291,7 +294,9 @@ def homepage():
         yield_est=yield_est,
         harvest_window=harvest_window,
         avg_maturity=avg_maturity,
-        recent_scans=recent_scans
+        recent_scans=recent_scans,
+        message=message,
+        error=error
     )
 
 @app.route('/calculate', methods=['POST'])
@@ -335,6 +340,24 @@ def calculate_results():
         ratoon_stage=ratoon_stage,
         rssi_infected=rssi_infected
     )
+
+@app.route('/farmer/feedback', methods=['POST'])
+@farmer_login_required
+def farmer_feedback():
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth', mode='login'))
+
+    feedback_message = request.form.get('feedback_message', '').strip()
+    if not feedback_message:
+        return redirect(url_for('homepage', error='Please enter your feedback before submitting.'))
+
+    feedback_entry = Feedback(user_id=user.id, message=feedback_message)
+    db.session.add(feedback_entry)
+    db.session.commit()
+    log_audit(f"Farmer feedback submitted by {user.fullname}", user_id=user.id)
+    return redirect(url_for('homepage', message='Thank you. Your feedback was submitted successfully.'))
 
 @app.route('/admin')
 @login_required
@@ -591,7 +614,15 @@ def admin_communications():
             message = 'Announcement published.'
 
     notifications = Notification.query.order_by(Notification.created_at.desc()).limit(10).all()
-    feedback = Feedback.query.order_by(Feedback.created_at.desc()).limit(20).all()
+    feedback_entries = Feedback.query.order_by(Feedback.created_at.desc()).limit(20).all()
+    feedback = []
+    for entry in feedback_entries:
+        farmer = User.query.get(entry.user_id) if entry.user_id else None
+        feedback.append({
+            "farmer_label": farmer.fullname if farmer else (f"Farmer ID {entry.user_id}" if entry.user_id else "Unknown"),
+            "message": entry.message,
+            "created_at": entry.created_at
+        })
     return render_template(
         'admin_communications.html',
         notifications=notifications,
@@ -788,7 +819,7 @@ def auth():
             db.session.add(new_user)
             db.session.commit()
             session['user_id'] = new_user.id
-            return redirect(url_for('homepage'))
+            return redirect(url_for('auth_register_success'))
 
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -807,6 +838,14 @@ def auth():
         return render_template('auth_form.html', mode=mode)
     
     return render_template('auth.html', mode=mode)
+
+@app.route('/auth/register-success')
+@farmer_login_required
+def auth_register_success():
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        return redirect(url_for('auth', mode='login'))
+    return render_template('auth_register_success.html', user=user)
 
 @app.route('/logout')
 def logout():
