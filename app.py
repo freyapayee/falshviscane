@@ -89,6 +89,14 @@ with app.app_context():
                     db.text("ALTER TABLE user ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0")
                 )
                 db.session.commit()
+            if "created_at" not in user_columns:
+                db.session.execute(
+                    db.text("ALTER TABLE user ADD COLUMN created_at DATETIME")
+                )
+                db.session.execute(
+                    db.text("UPDATE user SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL")
+                )
+                db.session.commit()
         except Exception:
             db.session.rollback()
 
@@ -282,6 +290,9 @@ def homepage():
         yield_est = "Low"
         harvest_window = "14-18 days"
 
+    message = request.args.get('message')
+    error = request.args.get('error')
+
     return render_template(
         'homepage.html',
         user=user,
@@ -291,7 +302,9 @@ def homepage():
         yield_est=yield_est,
         harvest_window=harvest_window,
         avg_maturity=avg_maturity,
-        recent_scans=recent_scans
+        recent_scans=recent_scans,
+        message=message,
+        error=error
     )
 
 @app.route('/calculate', methods=['POST'])
@@ -305,17 +318,20 @@ def calculate_results():
     variety = request.form.get('variety', '').strip()
     plowing_count = request.form.get('plowing_count', '').strip()
     weeding_count = request.form.get('weeding_count', '').strip()
+    fertilizer_count = request.form.get('fertilizer_count', '').strip()
+    ratoon_stage = request.form.get('ratoon_stage', '').strip()
     rssi_infected = request.form.get('rssi_infected', '').strip()
-    tons_per_hectare = request.form.get('tons_per_hectare', '').strip()
+    hectares = request.form.get('hectares', '').strip()
 
     latest_scan = Scan.query.filter_by(user_id=user.id).order_by(Scan.created_at.desc()).first()
     maturity_pct = latest_scan.maturity_pct if latest_scan else None
 
     variety_display = variety or 'Not provided'
     maturity_display = f"{maturity_pct}%" if maturity_pct is not None else 'Not provided'
-    tch_display = tons_per_hectare if tons_per_hectare else 'Not provided'
+    hectares_display = hectares if hectares else 'Not provided'
     lkg_tc_display = 'Pending'
     predicted_lkg_tc_display = 'Pending'
+    predicted_tc_ha_display = 'Pending'
 
     return render_template(
         'calculate_results.html',
@@ -323,21 +339,31 @@ def calculate_results():
         variety_display=variety_display,
         maturity_display=maturity_display,
         lkg_tc_display=lkg_tc_display,
-        tch_display=tch_display,
+        hectares_display=hectares_display,
         predicted_lkg_tc_display=predicted_lkg_tc_display,
+        predicted_tc_ha_display=predicted_tc_ha_display,
         plowing_count=plowing_count,
         weeding_count=weeding_count,
+        fertilizer_count=fertilizer_count,
+        ratoon_stage=ratoon_stage,
         rssi_infected=rssi_infected
     )
 
+<<<<<<< HEAD
 @app.route('/farmer/settings', methods=['GET', 'POST'])
 @farmer_login_required
 def farmer_settings():
+=======
+@app.route('/farmer/feedback', methods=['POST'])
+@farmer_login_required
+def farmer_feedback():
+>>>>>>> 60883f8c4383b8130c86b3bc4c794ff20f0de2fb
     user = User.query.get(session.get('user_id'))
     if not user:
         session.pop('user_id', None)
         return redirect(url_for('auth', mode='login'))
 
+<<<<<<< HEAD
     error = None
     success = None
 
@@ -382,6 +408,17 @@ def farmer_settings():
                 success = 'Password updated successfully.'
 
     return render_template('farmer_settings.html', user=user, error=error, success=success)
+=======
+    feedback_message = request.form.get('feedback_message', '').strip()
+    if not feedback_message:
+        return redirect(url_for('homepage', error='Please enter your feedback before submitting.'))
+
+    feedback_entry = Feedback(user_id=user.id, message=feedback_message)
+    db.session.add(feedback_entry)
+    db.session.commit()
+    log_audit(f"Farmer feedback submitted by {user.fullname}", user_id=user.id)
+    return redirect(url_for('homepage', message='Thank you. Your feedback was submitted successfully.'))
+>>>>>>> 60883f8c4383b8130c86b3bc4c794ff20f0de2fb
 
 @app.route('/admin')
 @login_required
@@ -424,6 +461,7 @@ def admin_portal():
 def admin_farmers():
     message = request.args.get('message')
     error = request.args.get('error')
+    search = request.args.get('search', '').strip()
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -466,8 +504,26 @@ def admin_farmers():
                 return redirect(url_for('admin_farmers', message=f"Temporary password for {user.fullname}: {temp_password}"))
             return redirect(url_for('admin_farmers', error='Unable to reset credentials.'))
 
-    users = User.query.filter_by(is_archived=False).order_by(User.id.desc()).all()
-    return render_template('admin_farmers.html', users=users, message=message, error=error, current_admin=get_current_admin())
+    users_query = User.query.filter_by(is_archived=False)
+    if search:
+        like_term = f"%{search}%"
+        users_query = users_query.filter(
+            (User.fullname.ilike(like_term)) |
+            (User.email.ilike(like_term)) |
+            (User.phone.ilike(like_term)) |
+            (User.province.ilike(like_term)) |
+            (User.municipality.ilike(like_term)) |
+            (User.barangay.ilike(like_term))
+        )
+    users = users_query.order_by(User.id.desc()).all()
+    return render_template(
+        'admin_farmers.html',
+        users=users,
+        message=message,
+        error=error,
+        search=search,
+        current_admin=get_current_admin()
+    )
 
 @app.route('/admin/farmers/<int:user_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -520,7 +576,6 @@ def admin_monitoring():
             "tch": tch,
             "lkg_tc": lkg_tc,
             "bags": bags,
-            "trash_pct": trash_pct,
             "created_at": scan.created_at
         })
     return render_template('admin_monitoring.html', rows=monitoring_rows, current_admin=get_current_admin())
@@ -556,7 +611,6 @@ def admin_reports():
             "total_maturity": 0,
             "total_tch": 0,
             "total_lkg_tc": 0,
-            "total_trash": 0
         })
         entry["count"] += 1
         entry["total_maturity"] += scan.maturity_pct
@@ -603,7 +657,15 @@ def admin_communications():
             message = 'Announcement published.'
 
     notifications = Notification.query.order_by(Notification.created_at.desc()).limit(10).all()
-    feedback = Feedback.query.order_by(Feedback.created_at.desc()).limit(20).all()
+    feedback_entries = Feedback.query.order_by(Feedback.created_at.desc()).limit(20).all()
+    feedback = []
+    for entry in feedback_entries:
+        farmer = User.query.get(entry.user_id) if entry.user_id else None
+        feedback.append({
+            "farmer_label": farmer.fullname if farmer else (f"Farmer ID {entry.user_id}" if entry.user_id else "Unknown"),
+            "message": entry.message,
+            "created_at": entry.created_at
+        })
     return render_template(
         'admin_communications.html',
         notifications=notifications,
@@ -826,7 +888,7 @@ def auth():
             db.session.add(new_user)
             db.session.commit()
             session['user_id'] = new_user.id
-            return redirect(url_for('homepage'))
+            return redirect(url_for('auth_register_success'))
 
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -845,6 +907,14 @@ def auth():
         return render_template('auth_form.html', mode=mode)
     
     return render_template('auth.html', mode=mode)
+
+@app.route('/auth/register-success')
+@farmer_login_required
+def auth_register_success():
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        return redirect(url_for('auth', mode='login'))
+    return render_template('auth_register_success.html', user=user)
 
 @app.route('/logout')
 def logout():
@@ -888,7 +958,7 @@ def scan_new():
 def superadmin_settings():
     config = SystemConfig.query.first()
     if not config:
-        config = SystemConfig(system_name='CaneDustry', maintenance_mode=False)
+        config = SystemConfig(system_name='VISCANE', maintenance_mode=False)
         db.session.add(config)
         db.session.commit()
 
@@ -925,7 +995,6 @@ def superadmin_reports():
             "maturity_pct": scan.maturity_pct,
             "tch": tch,
             "lkg_tc": lkg_tc,
-            "trash_pct": trash_pct,
             "created_at": scan.created_at
         })
 
@@ -935,7 +1004,6 @@ def superadmin_reports():
 
     report = {
         "avg_lkg_tc": avg_lkg_tc,
-        "avg_trash_pct": avg_trash_pct,
         "total_predicted_yield": total_predicted_yield,
         "total_scans": total_scans
     }
@@ -960,7 +1028,6 @@ def superadmin_reports_download():
         "Maturity %",
         "Estimated TCH",
         "Estimated LKG/TC",
-        "Estimated Trash %",
         "Created At"
     ])
     for scan in scans:
