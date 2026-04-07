@@ -18,7 +18,7 @@
                 </div>
                 <div>
                     <p class="brand-title">Farmer Account Management</p>
-                    <p class="brand-subtitle">Create, edit, and deactivate farmers</p>
+                    <p class="brand-subtitle">Create, edit, and reset farmer accounts</p>
                 </div>
             </div>
             <div class="header-actions">
@@ -75,7 +75,7 @@
                 <div class="panel-header">
                     <div>
                         <h3 class="panel-title">Account Actions</h3>
-                        <p class="panel-subtitle">Edit, reset, or deactivate</p>
+                        <p class="panel-subtitle">Edit or reset farmer access</p>
                     </div>
                     <span class="badge"><ion-icon name="people-outline"></ion-icon>{{ users|length }} farmers</span>
                 </div>
@@ -107,22 +107,14 @@
                                     <td>
                                         <div class="admin-action-row">
                                             <a class="tag" href="/admin/farmers/{{ user.id }}/edit">Edit</a>
-                                            <form method="POST" action="/admin/farmers">
-                                                <input type="hidden" name="action" value="reset">
-                                                <input type="hidden" name="user_id" value="{{ user.id }}">
-                                                <button class="tag warning" type="submit">Reset</button>
-                                            </form>
-                                            <form method="POST" action="/admin/farmers">
-                                                {% if user.is_active %}
-                                                    <input type="hidden" name="action" value="deactivate">
-                                                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                                                    <button class="tag alert" type="submit">Deactivate</button>
-                                                {% else %}
-                                                    <input type="hidden" name="action" value="activate">
-                                                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                                                    <button class="tag success" type="submit">Activate</button>
-                                                {% endif %}
-                                            </form>
+                                            <button
+                                                class="tag warning reset-trigger"
+                                                type="button"
+                                                data-user-id="{{ user.id }}"
+                                                data-user-name="{{ user.fullname }}"
+                                            >
+                                                Reset
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -139,5 +131,72 @@
 
         <div class="footer-link">VISCANE Admin | Farmer Account Management</div>
     </main>
+
+    <div class="dashboard-modal" id="reset-confirmation-modal" aria-hidden="true">
+        <div class="dashboard-modal-backdrop" data-close-reset-modal="true"></div>
+        <div class="dashboard-modal-card panel admin-reset-modal" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title">
+            <button class="dashboard-modal-close admin-modal-close-dark" type="button" aria-label="Close password reset confirmation" data-close-reset-modal="true">
+                <ion-icon name="close-outline"></ion-icon>
+            </button>
+            <div class="panel-header">
+                <div>
+                    <h3 class="panel-title" id="reset-modal-title">Confirm Password Reset</h3>
+                    <p class="panel-subtitle">This will reset the farmer account password to the default value.</p>
+                </div>
+            </div>
+
+            <p class="admin-reset-copy">
+                You are about to reset <strong id="reset-user-name">this farmer</strong> to the default password <strong>12345</strong>.
+            </p>
+
+            <form method="POST" action="/admin/farmers" class="admin-reset-actions">
+                <input type="hidden" name="action" value="reset">
+                <input type="hidden" name="user_id" id="reset-user-id">
+                <button class="btn ghost" type="button" data-close-reset-modal="true">Cancel</button>
+                <button class="btn primary" type="submit">
+                    <ion-icon name="refresh-outline"></ion-icon>
+                    Confirm Reset
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const modal = document.getElementById('reset-confirmation-modal');
+            const userNameTarget = document.getElementById('reset-user-name');
+            const userIdTarget = document.getElementById('reset-user-id');
+            const triggers = document.querySelectorAll('.reset-trigger');
+            const closers = document.querySelectorAll('[data-close-reset-modal]');
+
+            if (!modal || !userNameTarget || !userIdTarget) {
+                return;
+            }
+
+            function setModalState(isOpen) {
+                modal.classList.toggle('is-open', isOpen);
+                modal.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+                document.body.classList.toggle('modal-open', isOpen);
+            }
+
+            triggers.forEach((button) => {
+                button.addEventListener('click', () => {
+                    userNameTarget.textContent = button.dataset.userName || 'this farmer';
+                    userIdTarget.value = button.dataset.userId || '';
+                    setModalState(true);
+                });
+            });
+
+            closers.forEach((button) => {
+                button.addEventListener('click', () => setModalState(false));
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+                    setModalState(false);
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

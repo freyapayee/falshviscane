@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>VISCANE | Farmer Settings</title>
+</head>
+<body class="farmer-layout">
+    <div class="dashboard-bg"></div>
+
+    <header class="dashboard-header">
+        <div class="header-content">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <img src="{{ url_for('static', filename='logo.jpg') }}" alt="VISCANE Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                    </div>
+                <div>
+                    <p class="brand-title">Account Settings</p>
+                    <p class="brand-subtitle">Review your profile and update your account details</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a class="btn light" href="/homepage">
+                    <ion-icon name="grid-outline"></ion-icon>
+                    Dashboard
+                </a>
+                <a class="btn light" href="/logout">
+                    <ion-icon name="log-out-outline"></ion-icon>
+                    Sign Out
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-container fade-in">
+        {% if success %}
+            <div class="form-success">{{ success }}</div>
+        {% endif %}
+        {% if error %}
+            <div class="form-error">{{ error }}</div>
+        {% endif %}
+
+        <section class="section-grid two-col">
+            <form class="panel" method="POST">
+                <div class="panel-header">
+                    <div>
+                        <h3 class="panel-title">Profile Details</h3>
+                        <p class="panel-subtitle">Update your registered email address and phone number</p>
+                    </div>
+                    <input type="hidden" name="action" value="update_profile">
+                    <button class="btn primary" type="submit">
+                        <ion-icon name="save-outline"></ion-icon>
+                        Update
+                    </button>
+                </div>
+
+                <div class="stat-label">Full Name</div>
+                <input class="stat-input" type="text" value="{{ user.fullname }}" readonly>
+                <div class="stat-label">Email Address</div>
+                <input class="stat-input" type="email" name="email" value="{{ user.email }}" required>
+                <div class="stat-label">Phone Number</div>
+                <input class="stat-input" type="tel" name="phone" value="{{ user.phone }}" inputmode="numeric" minlength="11" maxlength="11" pattern="[0-9]{11}" title="Phone number must be exactly 11 digits" required>
+                <div class="stat-label">Province</div>
+                <input class="stat-input" type="text" value="{{ user.province or 'Not provided' }}" readonly>
+                <div class="stat-label">Municipality</div>
+                <input class="stat-input" type="text" value="{{ user.municipality or 'Not provided' }}" readonly>
+                <div class="stat-label">Barangay</div>
+                <input class="stat-input" type="text" value="{{ user.barangay or 'Not provided' }}" readonly>
+            </form>
+
+            <form class="panel" method="POST">
+                <div class="panel-header">
+                    <div>
+                        <h3 class="panel-title">Password Update</h3>
+                        <p class="panel-subtitle">Change your farmer portal password</p>
+                    </div>
+                    <input type="hidden" name="action" value="update_password">
+                    <button class="btn primary" type="submit">
+                        <ion-icon name="save-outline"></ion-icon>
+                        Update
+                    </button>
+                </div>
+
+                <div class="stat-label">Current Password</div>
+                <input class="stat-input" type="password" name="current_password" required>
+                <div class="stat-label">New Password</div>
+                <input class="stat-input" type="password" name="new_password" required>
+                <div class="stat-label">Confirm New Password</div>
+                <input class="stat-input" type="password" name="confirm_password" required>
+            </form>
+        </section>
+
+        <div class="footer-link">VISCANE Farmer Portal | Account Settings</div>
+    </main>
+</body>
+</html>

@@ -47,6 +47,10 @@
                 </button>
             </div>
 
+            {% if error %}
+            <div class="alert-banner">{{ error }}</div>
+            {% endif %}
+
             <div class="stat-label">Full Name</div>
             <input class="stat-input" type="text" name="fullname" value="{{ user.fullname }}" required>
             <div class="stat-label">Email</div>

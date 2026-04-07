@@ -1,3 +1,5 @@
+//basta sa docker ni sya
+
 docker compose up -d db
 python3 migrate_data.py
 docker compose up -d app
