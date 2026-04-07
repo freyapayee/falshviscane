@@ -639,6 +639,17 @@ body.admin-layout {
     flex-wrap: wrap;
 }
 
+.admin-action-pair {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.admin-inline-form {
+    margin: 0;
+}
+
 .superadmin-tag {
     border: 1px solid rgba(17, 36, 77, 0.12);
 }
@@ -1435,6 +1446,17 @@ body.admin-layout .btn.primary {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+.farmer-management-grid {
+    grid-template-columns: minmax(280px, 0.95fr) minmax(720px, 1.65fr);
+    align-items: start;
+}
+
+.farmer-management-side {
+    display: grid;
+    gap: 20px;
+    align-content: start;
+}
+
 .section-grid.three-col {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
@@ -1569,6 +1591,14 @@ body.admin-layout .btn.primary {
     font-size: 13px;
 }
 
+.account-actions-panel .data-table {
+    table-layout: fixed;
+}
+
+.deactivated-accounts-panel .data-table {
+    table-layout: fixed;
+}
+
 .data-table th {
     text-align: left;
     color: var(--neutral-500);
@@ -1581,6 +1611,31 @@ body.admin-layout .btn.primary {
 .data-table td {
     padding: 12px 0;
     border-bottom: 1px solid var(--neutral-100);
+}
+
+.actions-column {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.actions-cell {
+    width: 200px;
+}
+
+.account-actions-panel .data-table td {
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.deactivated-accounts-panel .data-table td {
+    vertical-align: top;
+    word-break: break-word;
+}
+
+@media (max-width: 1200px) {
+    .farmer-management-grid {
+        grid-template-columns: minmax(280px, 1fr);
+    }
 }
 
 .data-table tr:last-child td {
@@ -1597,6 +1652,10 @@ body.admin-layout .btn.primary {
     font-weight: 600;
     background: var(--neutral-100);
     color: var(--neutral-500);
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
 }
 
 .tag.success { background: #E8F5E9; color: #2E7D32; }

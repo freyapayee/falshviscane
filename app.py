@@ -349,21 +349,14 @@ def calculate_results():
         rssi_infected=rssi_infected
     )
 
-<<<<<<< HEAD
 @app.route('/farmer/settings', methods=['GET', 'POST'])
 @farmer_login_required
 def farmer_settings():
-=======
-@app.route('/farmer/feedback', methods=['POST'])
-@farmer_login_required
-def farmer_feedback():
->>>>>>> 60883f8c4383b8130c86b3bc4c794ff20f0de2fb
     user = User.query.get(session.get('user_id'))
     if not user:
         session.pop('user_id', None)
         return redirect(url_for('auth', mode='login'))
 
-<<<<<<< HEAD
     error = None
     success = None
 
@@ -408,7 +401,15 @@ def farmer_feedback():
                 success = 'Password updated successfully.'
 
     return render_template('farmer_settings.html', user=user, error=error, success=success)
-=======
+
+@app.route('/farmer/feedback', methods=['POST'])
+@farmer_login_required
+def farmer_feedback():
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth', mode='login'))
+
     feedback_message = request.form.get('feedback_message', '').strip()
     if not feedback_message:
         return redirect(url_for('homepage', error='Please enter your feedback before submitting.'))
@@ -418,7 +419,6 @@ def farmer_feedback():
     db.session.commit()
     log_audit(f"Farmer feedback submitted by {user.fullname}", user_id=user.id)
     return redirect(url_for('homepage', message='Thank you. Your feedback was submitted successfully.'))
->>>>>>> 60883f8c4383b8130c86b3bc4c794ff20f0de2fb
 
 @app.route('/admin')
 @login_required
@@ -504,6 +504,26 @@ def admin_farmers():
                 return redirect(url_for('admin_farmers', message=f"Temporary password for {user.fullname}: {temp_password}"))
             return redirect(url_for('admin_farmers', error='Unable to reset credentials.'))
 
+        if action == 'deactivate':
+            user_id = request.form.get('user_id')
+            user = User.query.get(user_id)
+            if user and not user.is_archived and user.is_active:
+                user.is_active = False
+                db.session.commit()
+                log_audit(f"Farmer account deactivated: {user.fullname}", user_id=get_current_admin().id if get_current_admin() else None)
+                return redirect(url_for('admin_farmers', message=f"{user.fullname} has been deactivated."))
+            return redirect(url_for('admin_farmers', error='Unable to deactivate account.'))
+
+        if action == 'activate':
+            user_id = request.form.get('user_id')
+            user = User.query.get(user_id)
+            if user and not user.is_archived and not user.is_active:
+                user.is_active = True
+                db.session.commit()
+                log_audit(f"Farmer account activated: {user.fullname}", user_id=get_current_admin().id if get_current_admin() else None)
+                return redirect(url_for('admin_farmers', message=f"{user.fullname} has been reactivated."))
+            return redirect(url_for('admin_farmers', error='Unable to activate account.'))
+
     users_query = User.query.filter_by(is_archived=False)
     if search:
         like_term = f"%{search}%"
@@ -516,9 +536,12 @@ def admin_farmers():
             (User.barangay.ilike(like_term))
         )
     users = users_query.order_by(User.id.desc()).all()
+    active_users = [user for user in users if user.is_active]
+    inactive_users = [user for user in users if not user.is_active]
     return render_template(
         'admin_farmers.html',
-        users=users,
+        users=active_users,
+        inactive_users=inactive_users,
         message=message,
         error=error,
         search=search,

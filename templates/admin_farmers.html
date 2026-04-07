@@ -42,40 +42,87 @@
             <div class="form-error">{{ error }}</div>
         {% endif %}
 
-        <section class="section-grid two-col">
-            <form class="panel" method="POST">
-                <input type="hidden" name="action" value="create">
-                <div class="panel-header">
-                    <div>
-                        <h3 class="panel-title">Create Farmer Account</h3>
-                        <p class="panel-subtitle">Add new farmer credentials</p>
+        <section class="section-grid two-col farmer-management-grid">
+            <div class="farmer-management-side">
+                <form class="panel" method="POST">
+                    <input type="hidden" name="action" value="create">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="panel-title">Create Farmer Account</h3>
+                            <p class="panel-subtitle">Add new farmer credentials</p>
+                        </div>
+                        <button class="btn primary" type="submit">
+                            <ion-icon name="person-add-outline"></ion-icon>
+                            Create
+                        </button>
                     </div>
-                    <button class="btn primary" type="submit">
-                        <ion-icon name="person-add-outline"></ion-icon>
-                        Create
-                    </button>
-                </div>
-                <div class="stat-label">Full Name</div>
-                <input class="stat-input" type="text" name="fullname" required>
-                <div class="stat-label">Email Address</div>
-                <input class="stat-input" type="email" name="email" required>
-                <div class="stat-label">Phone Number</div>
-                <input class="stat-input" type="text" name="phone" required>
-                <div class="stat-label">Province</div>
-                <input class="stat-input" type="text" name="province" placeholder="Negros Occidental">
-                <div class="stat-label">Municipality</div>
-                <input class="stat-input" type="text" name="municipality" placeholder="Isabela">
-                <div class="stat-label">Barangay</div>
-                <input class="stat-input" type="text" name="barangay">
-                <div class="stat-label">Temporary Password</div>
-                <input class="stat-input" type="text" name="password" required>
-            </form>
+                    <div class="stat-label">Full Name</div>
+                    <input class="stat-input" type="text" name="fullname" required>
+                    <div class="stat-label">Email Address</div>
+                    <input class="stat-input" type="email" name="email" required>
+                    <div class="stat-label">Phone Number</div>
+                    <input class="stat-input" type="text" name="phone" required>
+                    <div class="stat-label">Province</div>
+                    <input class="stat-input" type="text" name="province" placeholder="Negros Occidental">
+                    <div class="stat-label">Municipality</div>
+                    <input class="stat-input" type="text" name="municipality" placeholder="Isabela">
+                    <div class="stat-label">Barangay</div>
+                    <input class="stat-input" type="text" name="barangay">
+                    <div class="stat-label">Temporary Password</div>
+                    <input class="stat-input" type="text" name="password" required>
+                </form>
 
-            <div class="panel">
+                <div class="panel deactivated-accounts-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="panel-title">Deactivated Accounts</h3>
+                            <p class="panel-subtitle">Reactivate farmers with suspended access</p>
+                        </div>
+                        <span class="badge"><ion-icon name="pause-circle-outline"></ion-icon>{{ inactive_users|length }} deactivated</span>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Farmer</th>
+                                <th>Status</th>
+                                <th class="actions-column">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if inactive_users %}
+                                {% for user in inactive_users %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ user.fullname }}</strong><br>
+                                            <span class="list-meta">{{ user.email }}</span>
+                                        </td>
+                                        <td><span class="tag alert">Inactive</span></td>
+                                        <td class="actions-cell">
+                                            <form method="POST" action="/admin/farmers" class="admin-inline-form">
+                                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                <input type="hidden" name="action" value="activate">
+                                                <button class="tag success" type="submit" onclick="return confirm('Reactivate this farmer account?')">
+                                                    Activate
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="3">No deactivated farmer accounts.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel account-actions-panel">
                 <div class="panel-header">
                     <div>
                         <h3 class="panel-title">Account Actions</h3>
-                        <p class="panel-subtitle">Edit or reset farmer access</p>
+                        <p class="panel-subtitle">Edit, reset, or deactivate active farmer accounts</p>
                     </div>
                     <span class="badge"><ion-icon name="people-outline"></ion-icon>{{ users|length }} farmers</span>
                 </div>
@@ -94,7 +141,7 @@
                             <th>Registered Address</th>
                             <th>Registered Date</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th class="actions-column">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -114,24 +161,27 @@
                                             N/A
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        {% if user.is_active %}
-                                            <span class="tag success">Active</span>
-                                        {% else %}
-                                            <span class="tag alert">Inactive</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
+                                    <td><span class="tag success">Active</span></td>
+                                    <td class="actions-cell">
                                         <div class="admin-action-row">
-                                            <a class="tag" href="/admin/farmers/{{ user.id }}/edit">Edit</a>
-                                            <button
-                                                class="tag warning reset-trigger"
-                                                type="button"
-                                                data-user-id="{{ user.id }}"
-                                                data-user-name="{{ user.fullname }}"
-                                            >
-                                                Reset
-                                            </button>
+                                            <div class="admin-action-pair">
+                                                <a class="tag" href="/admin/farmers/{{ user.id }}/edit">Edit</a>
+                                                <button
+                                                    class="tag warning reset-trigger"
+                                                    type="button"
+                                                    data-user-id="{{ user.id }}"
+                                                    data-user-name="{{ user.fullname }}"
+                                                >
+                                                    Reset
+                                                </button>
+                                            </div>
+                                            <form method="POST" action="/admin/farmers" class="admin-inline-form">
+                                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                <input type="hidden" name="action" value="deactivate">
+                                                <button class="tag alert" type="submit" onclick="return confirm('Deactivate this farmer account?')">
+                                                    Deactivate
+                                                </button>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>
