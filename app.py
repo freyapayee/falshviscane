@@ -1,6 +1,7 @@
 import os
 import csv
 import secrets
+from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import wraps
 from io import StringIO
@@ -1060,8 +1061,8 @@ def calculate_results():
             )
         except ValueError as exc:
             api_error = str(exc)
-        except Exception:
-            api_error = "Prediction request failed."
+        except Exception as exc:
+            api_error = f"Prediction request failed: {exc}"
     else:
         if not variety:
             missing_fields.append("variety")
