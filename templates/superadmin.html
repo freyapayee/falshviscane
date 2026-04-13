@@ -165,6 +165,7 @@
                         <h4 class="panel-title">Active Farmers</h4>
                         <p class="panel-subtitle">Currently visible in the main registry</p>
                     </div>
+                    <span class="badge">{{ active_user_count }} active</span>
                 </div>
                 <table class="data-table">
                     <thead>
@@ -233,6 +234,39 @@
                         {% else %}
                             <tr>
                                 <td colspan="4">No archived users found.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="panel-subsection panel-subsection-muted">
+                <div class="panel-header superadmin-subheader">
+                    <div>
+                        <h4 class="panel-title">Deactivated Accounts</h4>
+                        <p class="panel-subtitle">Farmer accounts with suspended access but still retained in the registry</p>
+                    </div>
+                    <span class="badge">{{ deactivated_user_count }} deactivated</span>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if deactivated_users %}
+                            {% for user in deactivated_users %}
+                                <tr>
+                                    <td>{{ user.fullname }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.phone }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3">No deactivated accounts found.</td>
                             </tr>
                         {% endif %}
                     </tbody>

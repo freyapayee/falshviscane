@@ -1633,11 +1633,16 @@ def admin_reset():
 @app.route('/superadmin')
 @role_required('superadmin')
 def superadmin_portal():
-    total_users = User.query.filter_by(is_archived=False).count()
+    total_users = User.query.filter_by(is_archived=False, is_active=True).count()
+    active_user_count = User.query.filter_by(is_archived=False, is_active=True).count()
+    deactivated_user_count = User.query.filter_by(is_archived=False, is_active=False).count()
     archived_user_count = User.query.filter_by(is_archived=True).count()
     total_admins = Admin.query.filter_by(is_archived=False).count()
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    active_user_ids = db.session.query(User.id).filter(User.is_archived.is_(False)).subquery()
+    active_user_ids = db.session.query(User.id).filter(
+        User.is_archived.is_(False),
+        User.is_active.is_(True)
+    ).subquery()
     active_farmers = db.session.query(Scan.user_id).filter(
         Scan.created_at >= seven_days_ago,
         Scan.user_id.in_(active_user_ids)
@@ -1648,12 +1653,15 @@ def superadmin_portal():
         Scan.user_id.in_(active_user_ids)
     ).count()
     admins = Admin.query.filter_by(is_archived=False).order_by(Admin.id.desc()).all()
-    users = User.query.filter_by(is_archived=False).order_by(User.id.desc()).limit(8).all()
+    users = User.query.filter_by(is_archived=False, is_active=True).order_by(User.id.desc()).limit(8).all()
     archived_users = User.query.filter_by(is_archived=True).order_by(User.id.desc()).all()
+    deactivated_users = User.query.filter_by(is_archived=False, is_active=False).order_by(User.id.desc()).all()
     recent_scans = Scan.query.filter(Scan.user_id.in_(active_user_ids)).order_by(Scan.created_at.desc()).limit(6).all()
     return render_template(
         'superadmin.html',
         total_users=total_users,
+        active_user_count=active_user_count,
+        deactivated_user_count=deactivated_user_count,
         archived_user_count=archived_user_count,
         total_admins=total_admins,
         active_farmers=active_farmers,
@@ -1662,6 +1670,7 @@ def superadmin_portal():
         admins=admins,
         users=users,
         archived_users=archived_users,
+        deactivated_users=deactivated_users,
         recent_scans=recent_scans,
         current_admin=get_current_admin()
     )
