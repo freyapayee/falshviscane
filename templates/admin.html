@@ -120,7 +120,11 @@
                             <h4>{{ log.title }}</h4>
                             <div class="list-meta">{{ log.meta }}</div>
                         </div>
-                        <div class="list-status" style="color: {{ log.color }};">{{ log.status }}</div>
+                        {% if log.status == 'Review' %}
+                            <a class="tag" href="/admin/farmers" style="text-decoration: none;">{{ log.status }}</a>
+                        {% else %}
+                            <div class="list-status" style="color: {{ log.color }};">{{ log.status }}</div>
+                        {% endif %}
                     </div>
                 {% endfor %}
             </div>
@@ -166,10 +170,6 @@
                     <h3 class="panel-title">User Management</h3>
                     <p class="panel-subtitle">Role access and monitoring</p>
                 </div>
-                <button class="btn ghost">
-                    <ion-icon name="person-add-outline"></ion-icon>
-                    Invite User
-                </button>
             </div>
             <table class="data-table">
                 <thead>
@@ -189,7 +189,7 @@
                                 <td>Farmer</td>
                                 <td><span class="tag success">Active</span></td>
                                 <td>Recent</td>
-                                <td><span class="tag">View</span></td>
+                                <td><a class="tag" href="/admin/farmers" style="text-decoration: none;">Review</a></td>
                             </tr>
                         {% endfor %}
                     {% else %}
@@ -209,10 +209,10 @@
                 </div>
             </div>
             <div class="action-grid">
-                <div class="action-tile">
+                <a class="action-tile" href="/superadmin-login">
                     <ion-icon name="people-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
                     <div>Manage Users</div>
-                </div>
+                </a>
                 <div class="action-tile">
                     <ion-icon name="settings-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
                     <div>System Settings</div>

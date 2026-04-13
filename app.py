@@ -1,8 +1,6 @@
 import os
 import csv
-import json
 import secrets
-from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import wraps
 from io import StringIO
@@ -304,7 +302,12 @@ def farmer_login_required(view):
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get('admin_id'):
+        admin_id = session.get('admin_id')
+        if not admin_id:
+            return redirect(url_for('admin_login'))
+        admin = Admin.query.get(admin_id)
+        if not admin or admin.is_archived:
+            session.pop('admin_id', None)
             return redirect(url_for('admin_login'))
         return view(*args, **kwargs)
     return wrapped
@@ -331,6 +334,10 @@ def get_current_admin():
     if not admin or admin.is_archived:
         return None
     return admin
+
+
+def is_valid_admin_role(role):
+    return role in {'admin', 'superadmin'}
 
 def log_audit(action, user_id=None):
     try:
@@ -1183,6 +1190,59 @@ def calculate_results():
         rssi_infected=rssi_infected
     )
 
+@app.route('/farmer/settings', methods=['GET', 'POST'])
+@farmer_login_required
+def farmer_settings():
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth', mode='login'))
+
+    error = None
+    success = None
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'update_profile':
+            email = request.form.get('email', '').strip().lower()
+            phone = request.form.get('phone', '').strip()
+
+            if not email or not phone:
+                error = 'Please complete your email and phone number.'
+            elif len(phone) != 11 or not phone.isdigit():
+                error = 'Phone number must be exactly 11 digits.'
+            else:
+                existing_user = User.query.filter(User.email == email, User.id != user.id).first()
+                if existing_user:
+                    error = 'Email already exists.'
+                else:
+                    user.email = email
+                    user.phone = phone
+                    db.session.commit()
+                    log_audit(f"Farmer updated profile details: {user.fullname}", user_id=user.id)
+                    success = 'Profile updated successfully.'
+        else:
+            current_password = request.form.get('current_password', '')
+            new_password = request.form.get('new_password', '')
+            confirm_password = request.form.get('confirm_password', '')
+
+            if not current_password or not new_password or not confirm_password:
+                error = 'Please complete all password fields.'
+            elif not verify_and_upgrade_password(user, current_password):
+                error = 'Current password is incorrect.'
+            elif new_password != confirm_password:
+                error = 'New passwords do not match.'
+            elif current_password == new_password:
+                error = 'New password must be different from the current password.'
+            else:
+                user.password = generate_password_hash(new_password)
+                db.session.commit()
+                log_audit(f"Farmer updated password: {user.fullname}", user_id=user.id)
+                success = 'Password updated successfully.'
+
+    return render_template('farmer_settings.html', user=user, error=error, success=success)
+
 @app.route('/farmer/feedback', methods=['POST'])
 @farmer_login_required
 def farmer_feedback():
@@ -1208,19 +1268,6 @@ def admin_portal():
     current_admin = get_current_admin()
     total_users = User.query.filter_by(is_archived=False, is_active=True).count()
     total_scans = Scan.query.count()
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    active_user_ids = db.session.query(User.id).filter(
-        User.is_archived.is_(False),
-        User.is_active.is_(True)
-    ).subquery()
-    active_farmers = db.session.query(Scan.user_id).filter(
-        Scan.created_at >= seven_days_ago,
-        Scan.user_id.in_(active_user_ids)
-    ).distinct().count()
-    pending_reviews = Scan.query.filter(
-        Scan.status == 'pending',
-        Scan.user_id.in_(active_user_ids)
-    ).count()
     users = User.query.filter_by(is_archived=False, is_active=True).order_by(User.id.desc()).limit(6).all()
     logs = [
         {"icon": "server-outline", "title": "Database Backup", "meta": "Completed 1 hour ago", "status": "Success", "color": "#2E7D32"},
@@ -1244,8 +1291,6 @@ def admin_portal():
     return render_template(
         'admin.html',
         total_users=total_users,
-        active_farmers=active_farmers,
-        pending_reviews=pending_reviews,
         users=users,
         logs=logs,
         current_admin=current_admin,
@@ -1289,34 +1334,36 @@ def admin_farmers():
             log_audit(f"Admin created farmer account: {fullname}", user_id=get_current_admin().id if get_current_admin() else None)
             return redirect(url_for('admin_farmers', message='Farmer account created successfully.'))
 
-        if action == 'deactivate':
-            user_id = request.form.get('user_id')
-            user = User.query.get(user_id)
-            if user and not user.is_archived:
-                user.is_active = False
-                db.session.commit()
-                log_audit(f"Farmer account deactivated: {user.fullname}", user_id=get_current_admin().id if get_current_admin() else None)
-            return redirect(url_for('admin_farmers'))
-
-        if action == 'activate':
-            user_id = request.form.get('user_id')
-            user = User.query.get(user_id)
-            if user and not user.is_archived:
-                user.is_active = True
-                db.session.commit()
-                log_audit(f"Farmer account reactivated: {user.fullname}", user_id=get_current_admin().id if get_current_admin() else None)
-            return redirect(url_for('admin_farmers'))
-
         if action == 'reset':
             user_id = request.form.get('user_id')
             user = User.query.get(user_id)
             if user and not user.is_archived:
-                temp_password = f"Temp{secrets.randbelow(100000):05d}"
+                temp_password = "12345"
                 user.password = generate_password_hash(temp_password)
                 db.session.commit()
                 log_audit(f"Farmer credentials reset: {user.fullname}", user_id=get_current_admin().id if get_current_admin() else None)
                 return redirect(url_for('admin_farmers', message=f"Temporary password for {user.fullname}: {temp_password}"))
             return redirect(url_for('admin_farmers', error='Unable to reset credentials.'))
+
+        if action == 'deactivate':
+            user_id = request.form.get('user_id')
+            user = User.query.get(user_id)
+            if user and not user.is_archived and user.is_active:
+                user.is_active = False
+                db.session.commit()
+                log_audit(f"Farmer account deactivated: {user.fullname}", user_id=get_current_admin().id if get_current_admin() else None)
+                return redirect(url_for('admin_farmers', message=f"{user.fullname} has been deactivated."))
+            return redirect(url_for('admin_farmers', error='Unable to deactivate account.'))
+
+        if action == 'activate':
+            user_id = request.form.get('user_id')
+            user = User.query.get(user_id)
+            if user and not user.is_archived and not user.is_active:
+                user.is_active = True
+                db.session.commit()
+                log_audit(f"Farmer account activated: {user.fullname}", user_id=get_current_admin().id if get_current_admin() else None)
+                return redirect(url_for('admin_farmers', message=f"{user.fullname} has been reactivated."))
+            return redirect(url_for('admin_farmers', error='Unable to activate account.'))
 
     users_query = User.query.filter_by(is_archived=False)
     if search:
@@ -1330,9 +1377,12 @@ def admin_farmers():
             (User.barangay.ilike(like_term))
         )
     users = users_query.order_by(User.id.desc()).all()
+    active_users = [user for user in users if user.is_active]
+    inactive_users = [user for user in users if not user.is_active]
     return render_template(
         'admin_farmers.html',
-        users=users,
+        users=active_users,
+        inactive_users=inactive_users,
         message=message,
         error=error,
         search=search,
@@ -1347,17 +1397,32 @@ def admin_farmer_edit(user_id):
         return redirect(url_for('admin_farmers'))
 
     if request.method == 'POST':
-        user.fullname = request.form.get('fullname', '').strip()
-        user.email = request.form.get('email', '').strip().lower()
-        user.phone = request.form.get('phone', '').strip()
-        user.province = request.form.get('province', '').strip()
-        user.municipality = request.form.get('municipality', '').strip()
-        user.barangay = request.form.get('barangay', '').strip()
+        fullname = request.form.get('fullname', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        phone = request.form.get('phone', '').strip()
+        province = request.form.get('province', '').strip()
+        municipality = request.form.get('municipality', '').strip()
+        barangay = request.form.get('barangay', '').strip()
+
+        if not fullname or not email or not phone:
+            return redirect(url_for('admin_farmer_edit', user_id=user.id, error='Please complete all required fields.'))
+
+        existing_user = User.query.filter(User.email == email, User.id != user.id).first()
+        if existing_user:
+            return redirect(url_for('admin_farmer_edit', user_id=user.id, error='Email already exists.'))
+
+        user.fullname = fullname
+        user.email = email
+        user.phone = phone
+        user.province = province
+        user.municipality = municipality
+        user.barangay = barangay
         db.session.commit()
         log_audit(f"Farmer account updated: {user.fullname}", user_id=get_current_admin().id if get_current_admin() else None)
         return redirect(url_for('admin_farmers', message='Farmer account updated.'))
 
-    return render_template('admin_farmer_edit.html', user=user, current_admin=get_current_admin())
+    error = request.args.get('error')
+    return render_template('admin_farmer_edit.html', user=user, error=error, current_admin=get_current_admin())
 
 @app.route('/admin/monitoring')
 @login_required
@@ -1525,6 +1590,8 @@ def admin_setup():
             error = 'Please complete all fields.'
         elif password != confirm:
             error = 'Passwords do not match.'
+        elif Admin.query.filter((Admin.username.ilike(username)) | (Admin.email.ilike(email))).first():
+            error = 'An admin account with those details already exists.'
         else:
             admin = Admin(
                 username=username,
@@ -1566,6 +1633,7 @@ def admin_reset():
 @role_required('superadmin')
 def superadmin_portal():
     total_users = User.query.filter_by(is_archived=False).count()
+    archived_user_count = User.query.filter_by(is_archived=True).count()
     total_admins = Admin.query.filter_by(is_archived=False).count()
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
     active_user_ids = db.session.query(User.id).filter(User.is_archived.is_(False)).subquery()
@@ -1580,16 +1648,19 @@ def superadmin_portal():
     ).count()
     admins = Admin.query.filter_by(is_archived=False).order_by(Admin.id.desc()).all()
     users = User.query.filter_by(is_archived=False).order_by(User.id.desc()).limit(8).all()
+    archived_users = User.query.filter_by(is_archived=True).order_by(User.id.desc()).all()
     recent_scans = Scan.query.filter(Scan.user_id.in_(active_user_ids)).order_by(Scan.created_at.desc()).limit(6).all()
     return render_template(
         'superadmin.html',
         total_users=total_users,
+        archived_user_count=archived_user_count,
         total_admins=total_admins,
         active_farmers=active_farmers,
         total_scans=total_scans,
         pending_scans=pending_scans,
         admins=admins,
         users=users,
+        archived_users=archived_users,
         recent_scans=recent_scans,
         current_admin=get_current_admin()
     )
@@ -1601,7 +1672,7 @@ def superadmin_update_role():
     role = request.form.get('role', 'admin')
     current_admin = get_current_admin()
     admin = Admin.query.get(admin_id)
-    if admin and not admin.is_archived and current_admin and admin.id != current_admin.id:
+    if admin and not admin.is_archived and current_admin and admin.id != current_admin.id and is_valid_admin_role(role):
         admin.role = role
         db.session.commit()
         log_audit(f"Admin role updated for {admin.username} to {role}", user_id=current_admin.id)
@@ -1623,11 +1694,24 @@ def superadmin_archive_admin():
 @role_required('superadmin')
 def superadmin_archive_user():
     user_id = request.form.get('user_id')
+    current_admin = get_current_admin()
     user = User.query.get(user_id)
-    if user:
+    if user and not user.is_archived:
         user.is_archived = True
         db.session.commit()
-        log_audit(f"User account archived: {user.fullname}", user_id=user.id)
+        log_audit(f"User account archived: {user.fullname}", user_id=current_admin.id if current_admin else None)
+    return redirect(url_for('superadmin_portal'))
+
+@app.route('/superadmin/users/restore', methods=['POST'])
+@role_required('superadmin')
+def superadmin_restore_user():
+    user_id = request.form.get('user_id')
+    current_admin = get_current_admin()
+    user = User.query.get(user_id)
+    if user and user.is_archived:
+        user.is_archived = False
+        db.session.commit()
+        log_audit(f"User account restored: {user.fullname}", user_id=current_admin.id if current_admin else None)
     return redirect(url_for('superadmin_portal'))
 
 @app.route('/admin-logout')
@@ -1641,22 +1725,29 @@ def auth():
     
     if request.method == 'POST':
         if mode == 'register':
+            fullname = request.form.get('fullname', '').strip()
             email = request.form.get('email', '').strip().lower()
+            phone = request.form.get('phone', '').strip()
             password = request.form.get('password', '')
             confirm = request.form.get('confirm_password', '')
+            province = request.form.get('province', '').strip()
+            municipality = request.form.get('municipality', '').strip()
+            barangay = request.form.get('barangay', '').strip()
+            if not fullname or not email or not phone or not password:
+                return render_template('auth.html', mode=mode, error='Please complete all required fields.')
             if password != confirm:
                 return render_template('auth.html', mode=mode, error='Passwords do not match.')
             existing = User.query.filter_by(email=email).first()
             if existing:
                 return render_template('auth.html', mode=mode, error='Email already registered.')
             new_user = User(
-                fullname=request.form.get('fullname', '').strip(),
+                fullname=fullname,
                 email=email,
-                phone=request.form.get('phone', '').strip(),
+                phone=phone,
                 password=generate_password_hash(password),
-                province=request.form.get('province', '').strip(),
-                municipality=request.form.get('municipality', '').strip(),
-                barangay=request.form.get('barangay', '').strip()
+                province=province,
+                municipality=municipality,
+                barangay=barangay
             )
             db.session.add(new_user)
             db.session.commit()

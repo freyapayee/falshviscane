@@ -159,37 +159,85 @@
                 </div>
                 <span class="badge superadmin-badge"><ion-icon name="people-outline"></ion-icon>{{ total_users }} users</span>
             </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if users %}
-                        {% for user in users %}
-                            <tr>
-                                <td>{{ user.fullname }}</td>
-                                <td>{{ user.email }}</td>
-                                <td>{{ user.phone }}</td>
-                                <td>
-                                    <form method="POST" action="/superadmin/users/archive">
-                                        <input type="hidden" name="user_id" value="{{ user.id }}">
-                                        <button class="tag warning" type="submit" onclick="return confirm('Archive this user?')">Archive</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    {% else %}
+            <div class="panel-subsection">
+                <div class="panel-header superadmin-subheader">
+                    <div>
+                        <h4 class="panel-title">Active Farmers</h4>
+                        <p class="panel-subtitle">Currently visible in the main registry</p>
+                    </div>
+                </div>
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <td colspan="4">No users found.</td>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Action</th>
                         </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% if users %}
+                            {% for user in users %}
+                                <tr>
+                                    <td>{{ user.fullname }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.phone }}</td>
+                                    <td>
+                                        <form method="POST" action="/superadmin/users/archive">
+                                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                                            <button class="tag warning" type="submit" onclick="return confirm('Archive this user?')">Archive</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4">No active users found.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="panel-subsection panel-subsection-muted">
+                <div class="panel-header superadmin-subheader">
+                    <div>
+                        <h4 class="panel-title">Archived Farmers</h4>
+                        <p class="panel-subtitle">Stored farmer accounts removed from the active registry</p>
+                    </div>
+                    <span class="badge">{{ archived_user_count }} archived</span>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if archived_users %}
+                            {% for user in archived_users %}
+                                <tr>
+                                    <td>{{ user.fullname }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.phone }}</td>
+                                    <td>
+                                        <form method="POST" action="/superadmin/users/restore">
+                                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                                            <button class="tag success" type="submit" onclick="return confirm('Restore this user to the active registry?')">Restore</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4">No archived users found.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <div class="footer-link">VISCANE Superadmin | Governance & Oversight</div>
