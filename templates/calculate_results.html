@@ -44,6 +44,10 @@
                 </div>
             </div>
 
+            {% if api_error %}
+                <div class="form-error" style="margin-bottom: 20px;">{{ api_error }}</div>
+            {% endif %}
+
             <div class="results-grid">
                 <div class="result-row">
                     <span class="result-label">
@@ -57,6 +61,15 @@
                 <div class="result-row">
                     <span class="result-label">
                         <span class="result-icon">
+                            <ion-icon name="bar-chart-outline"></ion-icon>
+                        </span>
+                        Hectares
+                    </span>
+                    <span class="result-value">{{ hectares_display }}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">
+                        <span class="result-icon">
                             <ion-icon name="analytics-outline"></ion-icon>
                         </span>
                         Maturity
@@ -66,20 +79,11 @@
                 <div class="result-row">
                     <span class="result-label">
                         <span class="result-icon">
-                            <ion-icon name="speedometer-outline"></ion-icon>
+                            <ion-icon name="git-branch-outline"></ion-icon>
                         </span>
-                        LKG TC
+                        Crop Stage
                     </span>
-                    <span class="result-value{% if lkg_tc_display == 'Pending' %} is-pending{% endif %}">{{ lkg_tc_display }}</span>
-                </div>
-                <div class="result-row">
-                    <span class="result-label">
-                        <span class="result-icon">
-                            <ion-icon name="bar-chart-outline"></ion-icon>
-                        </span>
-                        Hectares
-                    </span>
-                    <span class="result-value">{{ hectares_display }}</span>
+                    <span class="result-value">{{ crop_stage_display }}</span>
                 </div>
                 <div class="result-row result-highlight">
                     <span class="result-label">
@@ -103,6 +107,18 @@
                     <span class="result-value{% if predicted_tc_ha_display == 'Pending' %} is-pending{% endif %}">
                         {{ predicted_tc_ha_display }}
                         <span class="result-unit">TC/HA</span>
+                    </span>
+                </div>
+                <div class="result-row result-highlight">
+                    <span class="result-label">
+                        <span class="result-icon">
+                            <ion-icon name="cube-outline"></ion-icon>
+                        </span>
+                        Predicted LKG
+                    </span>
+                    <span class="result-value{% if predicted_lkg_display == 'Pending' %} is-pending{% endif %}">
+                        {{ predicted_lkg_display }}
+                        <span class="result-unit">LKG</span>
                     </span>
                 </div>
             </div>

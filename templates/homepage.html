@@ -6,6 +6,562 @@
     <title>VISCANE | Farmer Dashboard</title>
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .stats-grid.stats-grid-inputs {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(320px, 1fr)) !important;
+            align-items: start;
+            column-gap: 18px;
+            row-gap: 18px;
+            width: 100%;
+            grid-auto-flow: row dense;
+        }
+
+        .stats-grid.stats-grid-inputs > .stat-card {
+            min-width: 0;
+            width: 100%;
+            padding: 16px 16px 18px;
+            grid-column: span 1 !important;
+        }
+
+        .stat-card-variety {
+            position: relative;
+            overflow: visible;
+            z-index: 3;
+        }
+
+        .variety-trigger {
+            position: relative;
+            width: 100%;
+            min-height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 14px;
+            padding: 20px;
+            border: 1px solid var(--neutral-200);
+            border-radius: 24px;
+            background: linear-gradient(180deg, #ffffff 0%, #f7fbf6 100%);
+            color: var(--neutral-900);
+            text-align: center;
+            font: inherit;
+            cursor: pointer;
+            transition: border-color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        .variety-trigger:hover,
+        .variety-trigger:focus-visible {
+            background: linear-gradient(180deg, #ffffff 0%, #f1f8ef 100%);
+            border-color: rgba(67, 160, 71, 0.35);
+            transform: translateY(-3px);
+            box-shadow: 0 18px 34px rgba(19, 32, 24, 0.16);
+            outline: none;
+        }
+
+        .variety-trigger.is-selected {
+            justify-content: flex-start;
+            text-align: left;
+            border-color: rgba(67, 160, 71, 0.42);
+            background: linear-gradient(180deg, #ffffff 0%, #eef7ed 100%);
+        }
+
+        .variety-trigger-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .variety-trigger:not(.is-selected) .variety-trigger-label {
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .variety-trigger-preview {
+            width: 0;
+            height: 0;
+            flex: 0 0 0;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.06);
+            background-size: cover;
+            background-position: center;
+            border: 0 solid rgba(255, 255, 255, 0.12);
+            opacity: 0;
+            overflow: hidden;
+            box-shadow: 0 16px 28px rgba(0, 0, 0, 0.24);
+            transition: width 180ms ease, height 180ms ease, flex-basis 180ms ease, opacity 180ms ease, border-width 180ms ease;
+        }
+
+        .variety-trigger-preview.is-visible {
+            width: 92px;
+            height: 92px;
+            flex: 0 0 92px;
+            border-width: 1px;
+            opacity: 1;
+        }
+
+        .variety-trigger-copy {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            width: 100%;
+            max-width: 780px;
+        }
+
+        .variety-trigger.is-selected .variety-trigger-copy {
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .variety-trigger-kicker {
+            display: block;
+            width: 100%;
+            margin: 0;
+            font-size: clamp(1.8rem, 4vw, 2.7rem);
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #2f6a33;
+            line-height: 0.95;
+        }
+
+        .variety-trigger-value {
+            display: block;
+            width: 100%;
+            margin: 0;
+            font-size: clamp(0.85rem, 1.2vw, 0.98rem);
+            color: #5f6f61;
+            line-height: 1.45;
+            white-space: normal;
+        }
+
+        .variety-trigger.is-selected .variety-trigger-kicker {
+            font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            text-transform: none;
+            line-height: 1.15;
+        }
+
+        .variety-trigger.is-selected .variety-trigger-value {
+            font-size: 0.98rem;
+            color: #5f6f61;
+        }
+
+        .variety-trigger-icon {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            font-size: 0.95rem;
+            color: #6b756f;
+            transition: transform 180ms ease;
+        }
+
+        @media (max-width: 900px) {
+            .variety-trigger {
+                min-height: 160px;
+                padding: 18px;
+            }
+
+            .variety-trigger-preview.is-visible {
+                width: 74px;
+                height: 74px;
+                flex-basis: 74px;
+            }
+
+            .variety-trigger-kicker {
+                font-size: clamp(1.55rem, 6vw, 2.2rem);
+            }
+
+            .variety-trigger:not(.is-selected) .variety-trigger-copy {
+                gap: 10px;
+            }
+
+            .variety-trigger.is-selected .variety-trigger-label {
+                align-items: center;
+            }
+        }
+
+        .variety-panel {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% - 10px);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(8px);
+            transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
+            z-index: 25;
+            pointer-events: none;
+        }
+
+        .variety-panel-inner {
+            min-height: 0;
+            overflow: hidden;
+            border-radius: 24px;
+            padding: 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #f7fbf6 100%);
+            border: 1px solid var(--neutral-200);
+            box-shadow: 0 18px 34px rgba(19, 32, 24, 0.16);
+        }
+
+        .variety-panel.is-open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .variety-panel.is-open + .variety-helper {
+            margin-top: 14px;
+        }
+
+        .variety-trigger[aria-expanded="true"] .variety-trigger-icon {
+            transform: rotate(180deg);
+        }
+
+        .variety-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(110px, 1fr));
+            gap: 10px;
+        }
+
+        .variety-tile {
+            position: relative;
+            min-height: 150px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 24px;
+            overflow: hidden;
+            background: #223227;
+            cursor: pointer;
+            padding: 0;
+            isolation: isolate;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.2);
+        }
+
+        .variety-tile::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: var(--variety-image);
+            background-size: cover;
+            background-position: center;
+            transform: scale(1);
+            transition: transform 220ms ease;
+        }
+
+        .variety-tile::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(9, 17, 12, 0.28) 0%, rgba(9, 17, 12, 0.62) 62%, rgba(9, 17, 12, 0.78) 100%);
+            transition: background 180ms ease;
+        }
+
+        .variety-tile:hover,
+        .variety-tile:focus-visible {
+            transform: translateY(-6px) scale(1.01);
+            border-color: rgba(201, 255, 171, 0.72);
+            box-shadow: 0 24px 42px rgba(0, 0, 0, 0.28);
+            outline: none;
+        }
+
+        .variety-tile:hover::before,
+        .variety-tile:focus-visible::before {
+            transform: scale(1.08);
+        }
+
+        .variety-tile:hover::after,
+        .variety-tile:focus-visible::after {
+            background: linear-gradient(180deg, rgba(9, 17, 12, 0.2) 0%, rgba(9, 17, 12, 0.52) 58%, rgba(9, 17, 12, 0.7) 100%);
+        }
+
+        .variety-tile.is-selected {
+            border-color: rgba(214, 255, 144, 0.95);
+            box-shadow: 0 0 0 3px rgba(214, 255, 144, 0.22), 0 24px 42px rgba(0, 0, 0, 0.32);
+        }
+
+        .variety-tile.is-selected::after {
+            background: linear-gradient(180deg, rgba(32, 58, 20, 0.12) 0%, rgba(17, 36, 13, 0.52) 56%, rgba(11, 23, 8, 0.78) 100%);
+        }
+
+        .variety-tile-content {
+            position: relative;
+            z-index: 1;
+            min-height: 210px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .variety-name {
+            margin: 0;
+            color: #fff;
+            font-family: "Fraunces", serif;
+            font-size: clamp(1.02rem, 0.8rem + 0.8vw, 1.45rem);
+            line-height: 1.1;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            text-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+            word-break: break-word;
+        }
+
+        .variety-check {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 1;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            background: rgba(255, 255, 255, 0.14);
+            color: rgba(255, 255, 255, 0.86);
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity 180ms ease, transform 180ms ease, background 180ms ease;
+        }
+
+        .variety-tile.is-selected .variety-check {
+            opacity: 1;
+            transform: translateY(0);
+            background: rgba(200, 255, 157, 0.26);
+            color: #ebffd2;
+        }
+
+        .variety-helper {
+            margin-top: 12px;
+            color: #6b756f;
+            font-size: 0.92rem;
+        }
+
+        .variety-helper.is-error {
+            color: #c45b5b;
+        }
+
+        .ag-selector-card {
+            position: relative;
+            overflow: visible;
+            z-index: 2;
+        }
+
+        .ag-selector-card.is-panel-open {
+            z-index: 40;
+        }
+
+        .selector-trigger {
+            position: relative;
+            width: 100%;
+            min-height: 108px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 14px;
+            padding: 14px;
+            border: 1px solid var(--neutral-200);
+            border-radius: 24px;
+            background: linear-gradient(180deg, #ffffff 0%, #f7fbf6 100%);
+            color: var(--neutral-900);
+            text-align: center;
+            font: inherit;
+            cursor: pointer;
+            transition: border-color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        .selector-trigger:hover,
+        .selector-trigger:focus-visible {
+            background: linear-gradient(180deg, #ffffff 0%, #f1f8ef 100%);
+            border-color: rgba(67, 160, 71, 0.35);
+            transform: translateY(-3px);
+            box-shadow: 0 18px 34px rgba(19, 32, 24, 0.16);
+            outline: none;
+        }
+
+        .selector-trigger.is-selected {
+            border-color: rgba(67, 160, 71, 0.42);
+            background: linear-gradient(180deg, #ffffff 0%, #eef7ed 100%);
+        }
+
+        .selector-trigger.is-error {
+            border-color: rgba(196, 91, 91, 0.45);
+        }
+
+        .selector-trigger-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .selector-trigger.is-selected .selector-trigger-content {
+            gap: 4px;
+        }
+
+        .selector-trigger-title {
+            display: block;
+            width: 100%;
+            margin: 0;
+            font-size: clamp(1rem, 1.7vw, 1.35rem);
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #2f6a33;
+            line-height: 1.02;
+        }
+
+        .selector-trigger.is-selected .selector-trigger-title {
+            font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
+        .selector-trigger-value {
+            display: block;
+            width: 100%;
+            margin: 0;
+            font-size: clamp(0.74rem, 1vw, 0.86rem);
+            color: #5f6f61;
+            line-height: 1.45;
+            white-space: normal;
+        }
+
+        .selector-trigger-icon {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 0.9rem;
+            color: #6b756f;
+            transition: transform 180ms ease;
+        }
+
+        .selector-panel {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% - 10px);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(8px);
+            transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
+            z-index: 24;
+            pointer-events: none;
+        }
+
+        .selector-panel.is-open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .selector-panel-inner {
+            min-height: 0;
+            overflow: hidden;
+            border-radius: 24px;
+            padding: 12px;
+            background: linear-gradient(180deg, #ffffff 0%, #f7fbf6 100%);
+            border: 1px solid var(--neutral-200);
+            box-shadow: 0 18px 34px rgba(19, 32, 24, 0.16);
+        }
+
+        .selector-trigger[aria-expanded="true"] .selector-trigger-icon {
+            transform: rotate(180deg);
+        }
+
+        .selector-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .selector-grid.two-col {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .selector-option {
+            min-height: 74px;
+            position: relative;
+            border: 1px solid rgba(67, 160, 71, 0.14);
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(27, 94, 32, 0.08), rgba(27, 94, 32, 0.14));
+            color: var(--neutral-900);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            text-align: center;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+            box-shadow: 0 14px 28px rgba(19, 32, 24, 0.1);
+        }
+
+        .selector-option:hover,
+        .selector-option:focus-visible {
+            transform: translateY(-4px);
+            border-color: rgba(67, 160, 71, 0.28);
+            background: linear-gradient(180deg, rgba(27, 94, 32, 0.12), rgba(27, 94, 32, 0.18));
+            box-shadow: 0 18px 30px rgba(19, 32, 24, 0.14);
+            outline: none;
+        }
+
+        .selector-option.is-selected {
+            border-color: rgba(67, 160, 71, 0.42);
+            box-shadow: 0 0 0 3px rgba(67, 160, 71, 0.12), 0 18px 30px rgba(19, 32, 24, 0.14);
+        }
+
+        .selector-option-value {
+            font-size: clamp(1.15rem, 2vw, 1.55rem);
+            font-weight: 600;
+            line-height: 1;
+            color: #2f6a33;
+        }
+
+        @media (max-width: 900px) {
+            .stats-grid.stats-grid-inputs {
+                grid-template-columns: 1fr !important;
+            }
+
+            .variety-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .variety-tile,
+            .variety-tile-content {
+                min-height: 180px;
+            }
+
+            .selector-grid,
+            .selector-grid.two-col {
+                grid-template-columns: 1fr;
+            }
+
+            .selector-trigger {
+                min-height: 96px;
+            }
+
+            .selector-option {
+                min-height: 68px;
+            }
+        }
+
+        .stats-grid.stats-grid-inputs .stat-card-tons {
+            grid-column: 1 / -1 !important;
+        }
+    </style>
 </head>
 <body class="farmer-layout">
     <div class="dashboard-bg"></div>
@@ -66,80 +622,224 @@
         </section>
 
         <form id="calc-form" class="stats-grid stats-grid-inputs" action="{{ url_for('calculate_results') }}" method="post">
-            <div class="stat-card">
+            <div class="stat-card stat-card-variety">
                 <div class="stat-label">Variety</div>
-                <select class="stat-select" name="variety">
-                    <option value="" disabled selected>Select variety</option>
-                    <option value="VMC 84-947">VMC 84-947</option>
-                    <option value="VMC 84-524">VMC 84-524</option>
-                    <option value="Mauritius RC888">Mauritius RC888</option>
-                </select>
+                <input type="hidden" name="variety" id="variety-input" required>
+                <button class="variety-trigger" id="variety-trigger" type="button" aria-expanded="false" aria-controls="variety-panel">
+                    <span class="variety-trigger-label">
+                        <span class="variety-trigger-preview" id="variety-trigger-preview" aria-hidden="true"></span>
+                        <span class="variety-trigger-copy">
+                            <span class="variety-trigger-kicker" id="variety-trigger-title">Variety</span>
+                            <span class="variety-trigger-value" id="variety-trigger-value">Click here to choose the variety of sugarcane.</span>
+                        </span>
+                    </span>
+                    <span class="variety-trigger-icon" aria-hidden="true"><ion-icon name="chevron-down"></ion-icon></span>
+                </button>
+                <div class="variety-panel" id="variety-panel">
+                    <div class="variety-panel-inner">
+                        <div class="variety-grid" id="variety-grid" role="radiogroup" aria-label="Sugarcane variety">
+                            <button class="variety-tile" type="button" data-variety="VMC 84-524" aria-pressed="false" style="--variety-image: url('{{ url_for('static', filename='varieties/vmc-84-524.jpg') }}');">
+                                <span class="variety-check" aria-hidden="true"><ion-icon name="checkmark"></ion-icon></span>
+                                <span class="variety-tile-content">
+                                    <span class="variety-name">VMC 84-524</span>
+                                </span>
+                            </button>
+                            <button class="variety-tile" type="button" data-variety="VMC 84-947" aria-pressed="false" style="--variety-image: url('{{ url_for('static', filename='varieties/vmc-84-947.png') }}');">
+                                <span class="variety-check" aria-hidden="true"><ion-icon name="checkmark"></ion-icon></span>
+                                <span class="variety-tile-content">
+                                    <span class="variety-name">VMC 84-947</span>
+                                </span>
+                            </button>
+                            <button class="variety-tile" type="button" data-variety="MAURITIO RC888" aria-pressed="false" style="--variety-image: url('{{ url_for('static', filename='varieties/mauritio-rc888.png') }}');">
+                                <span class="variety-check" aria-hidden="true"><ion-icon name="checkmark"></ion-icon></span>
+                                <span class="variety-tile-content">
+                                    <span class="variety-name">MAURITIO RC888</span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="variety-helper" id="variety-helper">Click the variety field to open the 3 options.</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card ag-selector-card" data-label="Number of Plowing">
                 <div class="stat-label">Number of Plowing</div>
-                <select class="stat-select" name="plowing_count">
-                    <option value="" disabled selected>Select number</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                </select>
+                <input class="selector-input" type="hidden" name="plowing_count" id="plowing_count-input">
+                <button class="selector-trigger" type="button" aria-expanded="false" aria-controls="plowing_count-panel">
+                    <span class="selector-trigger-content">
+                        <span class="selector-trigger-title">Plowing</span>
+                        <span class="selector-trigger-value">Click here to choose the number of plowing.</span>
+                    </span>
+                    <span class="selector-trigger-icon" aria-hidden="true"><ion-icon name="chevron-down"></ion-icon></span>
+                </button>
+                <div class="selector-panel" id="plowing_count-panel">
+                    <div class="selector-panel-inner">
+                        <div class="selector-grid" role="radiogroup" aria-label="Number of Plowing">
+                            <button class="selector-option" type="button" data-value="1" aria-pressed="false"><span class="selector-option-value">1</span></button>
+                            <button class="selector-option" type="button" data-value="2" aria-pressed="false"><span class="selector-option-value">2</span></button>
+                            <button class="selector-option" type="button" data-value="3" aria-pressed="false"><span class="selector-option-value">3</span></button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card ag-selector-card" data-label="Number of Weedings">
                 <div class="stat-label">Number of Weedings</div>
-                <select class="stat-select" name="weeding_count">
-                    <option value="" disabled selected>Select number</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                </select>
+                <input class="selector-input" type="hidden" name="weeding_count" id="weeding_count-input">
+                <button class="selector-trigger" type="button" aria-expanded="false" aria-controls="weeding_count-panel">
+                    <span class="selector-trigger-content">
+                        <span class="selector-trigger-title">Weedings</span>
+                        <span class="selector-trigger-value">Click here to choose the number of weedings.</span>
+                    </span>
+                    <span class="selector-trigger-icon" aria-hidden="true"><ion-icon name="chevron-down"></ion-icon></span>
+                </button>
+                <div class="selector-panel" id="weeding_count-panel">
+                    <div class="selector-panel-inner">
+                        <div class="selector-grid" role="radiogroup" aria-label="Number of Weedings">
+                            <button class="selector-option" type="button" data-value="1" aria-pressed="false"><span class="selector-option-value">1</span></button>
+                            <button class="selector-option" type="button" data-value="2" aria-pressed="false"><span class="selector-option-value">2</span></button>
+                            <button class="selector-option" type="button" data-value="3" aria-pressed="false"><span class="selector-option-value">3</span></button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card ag-selector-card" data-label="Number of Fertilizer">
                 <div class="stat-label">Number of Fertilizer</div>
-                <select class="stat-select" name="fertilizer_count">
-                    <option value="" disabled selected>Select number</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                </select>
+                <input class="selector-input" type="hidden" name="fertilizer_count" id="fertilizer_count-input">
+                <button class="selector-trigger" type="button" aria-expanded="false" aria-controls="fertilizer_count-panel">
+                    <span class="selector-trigger-content">
+                        <span class="selector-trigger-title">Fertilizer</span>
+                        <span class="selector-trigger-value">Click here to choose the number of fertilizer.</span>
+                    </span>
+                    <span class="selector-trigger-icon" aria-hidden="true"><ion-icon name="chevron-down"></ion-icon></span>
+                </button>
+                <div class="selector-panel" id="fertilizer_count-panel">
+                    <div class="selector-panel-inner">
+                        <div class="selector-grid" role="radiogroup" aria-label="Number of Fertilizer">
+                            <button class="selector-option" type="button" data-value="1" aria-pressed="false"><span class="selector-option-value">1</span></button>
+                            <button class="selector-option" type="button" data-value="2" aria-pressed="false"><span class="selector-option-value">2</span></button>
+                            <button class="selector-option" type="button" data-value="3" aria-pressed="false"><span class="selector-option-value">3</span></button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card ag-selector-card" data-label="Ratoon Stage">
                 <div class="stat-label">Ratoon Stage</div>
-                <select class="stat-select" name="ratoon_stage">
-                    <option value="" disabled selected>Select number</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                </select>
+                <input class="selector-input" type="hidden" name="ratoon_stage" id="ratoon_stage-input">
+                <button class="selector-trigger" type="button" aria-expanded="false" aria-controls="ratoon_stage-panel">
+                    <span class="selector-trigger-content">
+                        <span class="selector-trigger-title">Ratoon</span>
+                        <span class="selector-trigger-value">Click here to choose the ratoon stage.</span>
+                    </span>
+                    <span class="selector-trigger-icon" aria-hidden="true"><ion-icon name="chevron-down"></ion-icon></span>
+                </button>
+                <div class="selector-panel" id="ratoon_stage-panel">
+                    <div class="selector-panel-inner">
+                        <div class="selector-grid" role="radiogroup" aria-label="Ratoon Stage">
+                            <button class="selector-option" type="button" data-value="Plant" aria-pressed="false"><span class="selector-option-value">Plant</span></button>
+                            <button class="selector-option" type="button" data-value="1st Ratoon" aria-pressed="false"><span class="selector-option-value">1st Ratoon</span></button>
+                            <button class="selector-option" type="button" data-value="2nd Ratoon" aria-pressed="false"><span class="selector-option-value">2nd Ratoon</span></button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card ag-selector-card" data-label="Infected by RSSI">
                 <div class="stat-label">Infected by RSSI?</div>
-                <select class="stat-select" name="rssi_infected">
-                    <option value="" disabled selected>Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                </select>
+                <input class="selector-input" type="hidden" name="rssi_infected" id="rssi_infected-input">
+                <button class="selector-trigger" type="button" aria-expanded="false" aria-controls="rssi_infected-panel">
+                    <span class="selector-trigger-content">
+                        <span class="selector-trigger-title">RSSI</span>
+                        <span class="selector-trigger-value">Click here to choose the RSSI status.</span>
+                    </span>
+                    <span class="selector-trigger-icon" aria-hidden="true"><ion-icon name="chevron-down"></ion-icon></span>
+                </button>
+                <div class="selector-panel" id="rssi_infected-panel">
+                    <div class="selector-panel-inner">
+                        <div class="selector-grid two-col" role="radiogroup" aria-label="Infected by RSSI">
+                            <button class="selector-option" type="button" data-value="Yes" aria-pressed="false"><span class="selector-option-value">YES</span></button>
+                            <button class="selector-option" type="button" data-value="No" aria-pressed="false"><span class="selector-option-value">NO</span></button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="stat-card stat-card-tons">
                 <div class="stat-label">Hectares</div>
                 <div class="stat-inline">
-                    <select class="stat-select" name="hectares">
+                    <select class="stat-select" name="hectares" required>
                         <option value="" disabled selected>Select hectares</option>
-                        <option value="Less than 1 hectare">Less than 1 hectare</option>
-                        <option value="1 hectare">1 hectare</option>
-                        <option value="1-2">1-2</option>
-                        <option value="2">2</option>
-                        <option value="2-3">2-3</option>
-                        <option value="3">3</option>
-                        <option value="3-4">3-4</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                        <option value="More than 5">More than 5</option>
+                        <option value="Less than 1 Hectares">Less than 1 Hectare</option>
+                        <option value="1 Hectares">1 Hectare</option>
+                        <option value="1-2 Hectares">1-2 Hectares</option>
+                        <option value="2 Hectares">2 Hectares</option>
+                        <option value="2-3 Hectares">2-3 Hectares</option>
+                        <option value="3 Hectares">3 Hectares</option>
+                        <option value="3-4 Hectares">3-4 Hectares</option>
+                        <option value="4 Hectares">4 Hectares</option>
+                        <option value="5 Hectares">5 Hectares</option>
+                        <option value="More than 5 Hectares">More than 5 Hectares</option>
                     </select>
                     <button class="stat-action" id="tons-calc-btn" type="submit">Calculate</button>
                 </div>
                 <div class="stat-helper" id="tons-calc-result" aria-live="polite"></div>
             </div>
         </form>
+
+        <section class="section-grid two-col">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h3 class="panel-title">Recommendations</h3>
+                        <p class="panel-subtitle">Next best actions</p>
+                    </div>
+                    <span class="badge"><ion-icon name="checkmark-circle-outline"></ion-icon>{{ recommendations|length }} task{% if recommendations|length != 1 %}s{% endif %}</span>
+                </div>
+                {% if grouped_recommendations %}
+                    {% for group in grouped_recommendations %}
+                        <div class="list-meta" style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 6px;">
+                            {{ group.category }}
+                        </div>
+                        {% for rec in group["items"] %}
+                            <div class="list-row">
+                                <div class="list-badge"><ion-icon name="{{ rec.icon }}"></ion-icon></div>
+                                <div style="flex: 1;">
+                                    <h4 style="margin: 0;">{{ rec.title }}</h4>
+                                    <div class="list-meta">{{ rec.meta }}</div>
+                                </div>
+                                <span class="tag{% if rec.tag_class %} {{ rec.tag_class }}{% endif %}">{{ rec.tag }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                {% else %}
+                    <div class="list-meta">No recommendations yet. Run a calculation first.</div>
+                {% endif %}
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h3 class="panel-title">News & Announcements</h3>
+                        <p class="panel-subtitle">Posted by admin</p>
+                    </div>
+                    <span class="badge"><ion-icon name="megaphone-outline"></ion-icon>Latest</span>
+                </div>
+                <div>
+                    {% if announcements %}
+                        {% for announcement in announcements %}
+                            <div class="list-row">
+                                <div class="list-badge"><ion-icon name="notifications-outline"></ion-icon></div>
+                                <div style="flex: 1;">
+                                    <h4 style="margin: 0;">{{ announcement.title }}</h4>
+                                    <div class="list-meta" style="margin-top: 4px;">{{ announcement.message }}</div>
+                                    <div class="list-meta" style="margin-top: 6px;">
+                                        {{ announcement.created_at.strftime('%b %d, %I:%M %p') if announcement.created_at else 'Date unavailable' }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="list-meta">No announcements yet. New admin updates will appear here.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
 
         <section class="section-grid two-col">
             <div class="panel">
@@ -175,78 +875,6 @@
             <div class="panel">
                 <div class="panel-header">
                     <div>
-                        <h3 class="panel-title">Field Overview</h3>
-                        <p class="panel-subtitle">Live condition summary</p>
-                    </div>
-                    <span class="badge"><ion-icon name="pulse-outline"></ion-icon>Stable</span>
-                </div>
-                <div>
-                    <div class="list-row">
-                        <div class="list-badge"><ion-icon name="leaf-outline"></ion-icon></div>
-                        <div style="flex: 1;">
-                            <div class="list-meta">Average maturity</div>
-                            <strong>{{ avg_maturity }}%</strong>
-                            <div class="progress"><span style="width: {{ avg_maturity }}%;"></span></div>
-                        </div>
-                    </div>
-                    <div class="list-row">
-                        <div class="list-badge"><ion-icon name="water-outline"></ion-icon></div>
-                        <div style="flex: 1;">
-                            <div class="list-meta">Moisture level</div>
-                            <strong>{% if avg_maturity >= 85 %}Optimal{% elif avg_maturity >= 75 %}Moderate{% else %}Low{% endif %}</strong>
-                            <div class="progress"><span style="width: {% if avg_maturity >= 85 %}78{% elif avg_maturity >= 75 %}62{% else %}40{% endif %}%;"></span></div>
-                        </div>
-                    </div>
-                    <div class="list-row">
-                        <div class="list-badge"><ion-icon name="bug-outline"></ion-icon></div>
-                        <div style="flex: 1;">
-                            <div class="list-meta">Pest risk</div>
-                            <strong>{% if avg_maturity >= 85 %}Low{% elif avg_maturity >= 75 %}Moderate{% else %}Elevated{% endif %}</strong>
-                            <div class="progress"><span style="width: {% if avg_maturity >= 85 %}24{% elif avg_maturity >= 75 %}38{% else %}55{% endif %}%;"></span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section-grid two-col">
-            <div class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h3 class="panel-title">Recommendations</h3>
-                        <p class="panel-subtitle">Next best actions</p>
-                    </div>
-                    <span class="badge"><ion-icon name="checkmark-circle-outline"></ion-icon>3 tasks</span>
-                </div>
-                <div class="list-row">
-                    <div class="list-badge"><ion-icon name="calendar-outline"></ion-icon></div>
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0;">Schedule harvest for Plot #4</h4>
-                        <div class="list-meta">Recommended date: Feb 12</div>
-                    </div>
-                    <span class="tag success">Priority</span>
-                </div>
-                <div class="list-row">
-                    <div class="list-badge"><ion-icon name="color-wand-outline"></ion-icon></div>
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0;">Apply nutrient mix on Plot #2</h4>
-                        <div class="list-meta">Boost sucrose in 4 days</div>
-                    </div>
-                    <span class="tag warning">Soon</span>
-                </div>
-                <div class="list-row">
-                    <div class="list-badge"><ion-icon name="trail-sign-outline"></ion-icon></div>
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0;">Prepare transport route</h4>
-                        <div class="list-meta">Rain window expected</div>
-                    </div>
-                    <span class="tag">Plan</span>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-header">
-                    <div>
                         <h3 class="panel-title">Quick Tools</h3>
                         <p class="panel-subtitle">Farmer productivity center</p>
                     </div>
@@ -257,19 +885,44 @@
                         <div>Scan Gallery</div>
                     </div>
                     <div class="action-tile">
-                        <ion-icon name="stats-chart-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
-                        <div>Yield Analytics</div>
-                    </div>
-                    <div class="action-tile">
                         <ion-icon name="time-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
                         <div>Scan History</div>
                     </div>
-                    <div class="action-tile">
-                        <ion-icon name="alert-circle-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
-                        <div>Alerts Center</div>
-                    </div>
                 </div>
             </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <div>
+                    <h3 class="panel-title">Agronomic Input Logs</h3>
+                    <p class="panel-subtitle">Your previous inputs and system recommendations</p>
+                </div>
+                <span class="badge"><ion-icon name="time-outline"></ion-icon>{{ agronomic_logs|length }} log{% if agronomic_logs|length != 1 %}s{% endif %}</span>
+            </div>
+            {% if agronomic_logs %}
+                {% for log in agronomic_logs %}
+                    <div class="list-row" style="align-items: flex-start;">
+                        <div class="list-badge"><ion-icon name="document-text-outline"></ion-icon></div>
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0;">
+                                {{ log.variety or 'Unknown Variety' }} | {{ log.created_at.strftime('%b %d, %I:%M %p') if log.created_at else 'Date unavailable' }}
+                            </h4>
+                            <div class="list-meta" style="margin-top: 6px;">
+                                Inputs: Plowing {{ log.plowing_count or '-' }}, Weeding {{ log.weeding_count or '-' }}, Fertilizer {{ log.fertilizer_count or '-' }}, Ratoon {{ log.ratoon_stage or '-' }}, RSSI {{ log.rssi_infected or '-' }}, Hectares {{ log.hectares or '-' }}
+                            </div>
+                            <div class="list-meta" style="margin-top: 6px;">
+                                Prediction: LKG/TC {{ '%.2f'|format(log.predicted_lkg_tc) if log.predicted_lkg_tc is not none else 'Pending' }}, TC/HA {{ '%.2f'|format(log.predicted_tc_ha) if log.predicted_tc_ha is not none else 'Pending' }}, LKG {{ '%.2f'|format(log.predicted_lkg) if log.predicted_lkg is not none else 'Pending' }}
+                            </div>
+                            <div class="list-meta" style="margin-top: 6px;">
+                                Recommendations: {{ log.recommendations_summary or 'No recommendation generated.' }}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="list-meta">No agronomic logs yet. Calculate once to save your first log.</div>
+            {% endif %}
         </section>
 
         <section class="panel">
@@ -319,8 +972,193 @@
             const captureBtn = document.getElementById('capture-btn');
             const cameraStream = document.getElementById('camera-stream');
             const cameraFlash = document.getElementById('camera-flash');
+            const calcForm = document.getElementById('calc-form');
+            const varietyInput = document.getElementById('variety-input');
+            const varietyTrigger = document.getElementById('variety-trigger');
+            const varietyTriggerTitle = document.getElementById('variety-trigger-title');
+            const varietyTriggerValue = document.getElementById('variety-trigger-value');
+            const varietyTriggerPreview = document.getElementById('variety-trigger-preview');
+            const varietyPanel = document.getElementById('variety-panel');
+            const varietyHelper = document.getElementById('variety-helper');
+            const varietyTiles = Array.from(document.querySelectorAll('.variety-tile'));
+            const agSelectorStates = Array.from(document.querySelectorAll('.ag-selector-card')).map((card) => ({
+                card,
+                label: card.dataset.label,
+                input: card.querySelector('.selector-input'),
+                trigger: card.querySelector('.selector-trigger'),
+                title: card.querySelector('.selector-trigger-title'),
+                value: card.querySelector('.selector-trigger-value'),
+                panel: card.querySelector('.selector-panel'),
+                options: Array.from(card.querySelectorAll('.selector-option')),
+                defaultTitle: card.querySelector('.selector-trigger-title')?.textContent || '',
+                defaultValue: card.querySelector('.selector-trigger-value')?.textContent || '',
+            }));
             let activeStream = null;
             let isStarting = false;
+
+            const setVarietyPanelState = (isOpen) => {
+                if (!varietyPanel || !varietyTrigger) {
+                    return;
+                }
+                varietyPanel.classList.toggle('is-open', isOpen);
+                varietyTrigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            };
+
+            const setAgPanelState = (selector, isOpen) => {
+                if (!selector.panel || !selector.trigger) {
+                    return;
+                }
+                selector.panel.classList.toggle('is-open', isOpen);
+                selector.trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                if (selector.card) {
+                    selector.card.classList.toggle('is-panel-open', isOpen);
+                }
+            };
+
+            const closeAllSelectorPanels = (activePanel = null) => {
+                if (varietyPanel && varietyPanel !== activePanel) {
+                    setVarietyPanelState(false);
+                }
+                agSelectorStates.forEach((selector) => {
+                    if (selector.panel !== activePanel) {
+                        setAgPanelState(selector, false);
+                    }
+                });
+            };
+
+            const syncVarietySelection = (selectedValue) => {
+                if (!varietyInput) {
+                    return;
+                }
+                varietyInput.value = selectedValue;
+                varietyInput.setCustomValidity('');
+                const selectedTile = varietyTiles.find((tile) => tile.dataset.variety === selectedValue);
+                if (varietyTriggerTitle) {
+                    varietyTriggerTitle.textContent = selectedValue;
+                }
+                if (varietyTriggerValue) {
+                    varietyTriggerValue.textContent = 'Tap to change variety';
+                }
+                if (varietyTrigger && selectedTile) {
+                    varietyTrigger.classList.add('is-selected');
+                }
+                if (varietyTriggerPreview && selectedTile) {
+                    const tileImage = getComputedStyle(selectedTile).getPropertyValue('--variety-image').trim();
+                    varietyTriggerPreview.style.backgroundImage = tileImage;
+                    varietyTriggerPreview.classList.add('is-visible');
+                }
+                if (varietyHelper) {
+                    varietyHelper.textContent = `${selectedValue} selected`;
+                    varietyHelper.classList.remove('is-error');
+                }
+                varietyTiles.forEach((tile) => {
+                    const isSelected = tile.dataset.variety === selectedValue;
+                    tile.classList.toggle('is-selected', isSelected);
+                    tile.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+                });
+                setVarietyPanelState(false);
+            };
+
+            const syncAgSelection = (selector, selectedValue) => {
+                if (!selector.input) {
+                    return;
+                }
+                selector.input.value = selectedValue;
+                if (selector.title) {
+                    selector.title.textContent = selectedValue;
+                }
+                if (selector.value) {
+                    selector.value.textContent = selector.label;
+                }
+                if (selector.trigger) {
+                    selector.trigger.classList.add('is-selected');
+                    selector.trigger.classList.remove('is-error');
+                }
+                selector.options.forEach((option) => {
+                    const isSelected = option.dataset.value === selectedValue;
+                    option.classList.toggle('is-selected', isSelected);
+                    option.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+                });
+                setAgPanelState(selector, false);
+            };
+
+            if (varietyTrigger) {
+                varietyTrigger.addEventListener('click', () => {
+                    const isOpen = varietyTrigger.getAttribute('aria-expanded') === 'true';
+                    closeAllSelectorPanels(isOpen ? null : varietyPanel);
+                    setVarietyPanelState(!isOpen);
+                });
+            }
+
+            varietyTiles.forEach((tile) => {
+                tile.addEventListener('click', () => {
+                    syncVarietySelection(tile.dataset.variety);
+                });
+            });
+
+            agSelectorStates.forEach((selector) => {
+                if (selector.trigger) {
+                    selector.trigger.addEventListener('click', () => {
+                        const isOpen = selector.trigger.getAttribute('aria-expanded') === 'true';
+                        closeAllSelectorPanels(isOpen ? null : selector.panel);
+                        setAgPanelState(selector, !isOpen);
+                    });
+                }
+
+                selector.options.forEach((option) => {
+                    option.addEventListener('click', () => {
+                        syncAgSelection(selector, option.dataset.value);
+                    });
+                });
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!varietyPanel || !varietyTrigger) {
+                    closeAllSelectorPanels();
+                    return;
+                }
+                const clickedInsideVarietyPanel = varietyPanel.contains(event.target);
+                const clickedVarietyTrigger = varietyTrigger.contains(event.target);
+                const clickedAgTrigger = agSelectorStates.some((selector) => selector.trigger?.contains(event.target));
+                const clickedAgPanel = agSelectorStates.some((selector) => selector.panel?.contains(event.target));
+                if (!clickedInsideVarietyPanel && !clickedVarietyTrigger && !clickedAgTrigger && !clickedAgPanel) {
+                    closeAllSelectorPanels();
+                }
+            });
+
+            if (calcForm) {
+                calcForm.addEventListener('submit', (event) => {
+                    if (!varietyInput || varietyInput.value) {
+                        const missingAgSelector = agSelectorStates.find((selector) => !selector.input?.value);
+                        if (!missingAgSelector) {
+                            return;
+                        }
+                        event.preventDefault();
+                        closeAllSelectorPanels(missingAgSelector.panel);
+                        setAgPanelState(missingAgSelector, true);
+                        if (missingAgSelector.trigger) {
+                            missingAgSelector.trigger.classList.add('is-error');
+                            missingAgSelector.trigger.focus();
+                        }
+                        if (missingAgSelector.value) {
+                            missingAgSelector.value.textContent = 'Please choose an option.';
+                        }
+                        return;
+                    }
+                    event.preventDefault();
+                    closeAllSelectorPanels(varietyPanel);
+                    varietyInput.setCustomValidity('Please select a variety.');
+                    setVarietyPanelState(true);
+                    if (varietyHelper) {
+                        varietyHelper.textContent = 'Please select one variety before calculating.';
+                        varietyHelper.classList.add('is-error');
+                    }
+                    const firstTile = varietyTiles[0];
+                    if (firstTile) {
+                        firstTile.focus();
+                    }
+                });
+            }
 
             const setCameraButtonState = (isLoading) => {
                 if (!openCameraBtn) {
@@ -453,6 +1291,7 @@
                     stopCamera();
                 }
             });
+
         })();
     </script>
 </body>
