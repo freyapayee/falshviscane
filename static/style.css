@@ -1479,7 +1479,7 @@ body.admin-layout .btn.primary {
 
 .admin-search-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) 110px;
     gap: 10px;
     align-items: center;
     margin-bottom: 14px;
@@ -1487,6 +1487,16 @@ body.admin-layout .btn.primary {
 
 .admin-search-row .stat-input {
     margin-top: 0;
+    height: 40px;
+    padding: 0 12px;
+    line-height: 40px;
+}
+
+.admin-search-row .btn {
+    height: 40px;
+    width: 110px;
+    padding: 0 12px;
+    align-self: center;
 }
 
 .panel-title {
@@ -1605,11 +1615,11 @@ body.admin-layout .btn.primary {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    padding-bottom: 8px;
+    padding: 0 10px 8px 0;
 }
 
 .data-table td {
-    padding: 12px 0;
+    padding: 12px 10px 12px 0;
     border-bottom: 1px solid var(--neutral-100);
 }
 
@@ -1625,6 +1635,39 @@ body.admin-layout .btn.primary {
 .account-actions-panel .data-table td {
     vertical-align: top;
     word-break: break-word;
+}
+
+.account-actions-panel .data-table th:nth-child(1),
+.account-actions-panel .data-table td:nth-child(1) {
+    width: 18%;
+}
+
+.account-actions-panel .data-table th:nth-child(2),
+.account-actions-panel .data-table td:nth-child(2) {
+    width: 12%;
+}
+
+.account-actions-panel .data-table th:nth-child(3),
+.account-actions-panel .data-table td:nth-child(3) {
+    width: 28%;
+    white-space: normal;
+    word-break: break-word;
+    hyphens: auto;
+}
+
+.account-actions-panel .data-table th:nth-child(4),
+.account-actions-panel .data-table td:nth-child(4) {
+    width: 12%;
+}
+
+.account-actions-panel .data-table th:nth-child(5),
+.account-actions-panel .data-table td:nth-child(5) {
+    width: 10%;
+}
+
+.account-actions-panel .data-table th:nth-child(6),
+.account-actions-panel .data-table td:nth-child(6) {
+    width: 20%;
 }
 
 .deactivated-accounts-panel .data-table td {
