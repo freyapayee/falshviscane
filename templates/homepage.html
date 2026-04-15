@@ -15,6 +15,7 @@
             row-gap: 18px;
             width: 100%;
             grid-auto-flow: row dense;
+            --variety-helper-space: 28px;
         }
 
         .stats-grid.stats-grid-inputs > .stat-card {
@@ -33,12 +34,12 @@
         .variety-trigger {
             position: relative;
             width: 100%;
-            min-height: 180px;
+            min-height: 108px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-top: 14px;
-            padding: 20px;
+            padding: 14px;
             border: 1px solid var(--neutral-200);
             border-radius: 24px;
             background: linear-gradient(180deg, #ffffff 0%, #f7fbf6 100%);
@@ -60,8 +61,8 @@
         }
 
         .variety-trigger.is-selected {
-            justify-content: flex-start;
-            text-align: left;
+            justify-content: center;
+            text-align: center;
             border-color: rgba(67, 160, 71, 0.42);
             background: linear-gradient(180deg, #ffffff 0%, #eef7ed 100%);
         }
@@ -70,14 +71,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 22px;
+            gap: 8px;
             width: 100%;
             min-width: 0;
         }
 
         .variety-trigger:not(.is-selected) .variety-trigger-label {
             flex-direction: column;
-            gap: 14px;
+            gap: 6px;
         }
 
         .variety-trigger-preview {
@@ -96,9 +97,9 @@
         }
 
         .variety-trigger-preview.is-visible {
-            width: 92px;
-            height: 92px;
-            flex: 0 0 92px;
+            width: 64px;
+            height: 64px;
+            flex: 0 0 64px;
             border-width: 1px;
             opacity: 1;
         }
@@ -108,79 +109,79 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
             min-width: 0;
             width: 100%;
             max-width: 780px;
         }
 
         .variety-trigger.is-selected .variety-trigger-copy {
-            align-items: flex-start;
-            gap: 8px;
+            align-items: center;
+            gap: 4px;
         }
 
         .variety-trigger-kicker {
             display: block;
             width: 100%;
             margin: 0;
-            font-size: clamp(1.8rem, 4vw, 2.7rem);
-            font-weight: 500;
-            letter-spacing: 0.04em;
+            font-size: clamp(1rem, 1.7vw, 1.35rem);
+            font-weight: 700;
+            letter-spacing: 0.03em;
             text-transform: uppercase;
             color: #2f6a33;
-            line-height: 0.95;
+            line-height: 1.02;
         }
 
         .variety-trigger-value {
             display: block;
             width: 100%;
             margin: 0;
-            font-size: clamp(0.85rem, 1.2vw, 0.98rem);
+            font-size: clamp(0.74rem, 1vw, 0.86rem);
             color: #5f6f61;
             line-height: 1.45;
             white-space: normal;
         }
 
         .variety-trigger.is-selected .variety-trigger-kicker {
-            font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+            font-size: clamp(0.95rem, 1.4vw, 1.1rem);
             font-weight: 700;
             letter-spacing: 0.01em;
-            text-transform: none;
+            text-transform: uppercase;
             line-height: 1.15;
         }
 
         .variety-trigger.is-selected .variety-trigger-value {
-            font-size: 0.98rem;
+            font-size: clamp(0.74rem, 1vw, 0.86rem);
             color: #5f6f61;
         }
 
         .variety-trigger-icon {
             position: absolute;
-            top: 14px;
-            right: 14px;
-            font-size: 0.95rem;
+            top: 12px;
+            right: 12px;
+            font-size: 0.9rem;
             color: #6b756f;
             transition: transform 180ms ease;
         }
 
         @media (max-width: 900px) {
             .variety-trigger {
-                min-height: 160px;
-                padding: 18px;
+                min-height: 108px;
+                padding: 14px;
             }
 
             .variety-trigger-preview.is-visible {
-                width: 74px;
-                height: 74px;
-                flex-basis: 74px;
+                width: 56px;
+                height: 56px;
+                flex-basis: 56px;
             }
 
             .variety-trigger-kicker {
-                font-size: clamp(1.55rem, 6vw, 2.2rem);
+                font-size: clamp(0.95rem, 3.4vw, 1.2rem);
             }
 
             .variety-trigger:not(.is-selected) .variety-trigger-copy {
-                gap: 10px;
+                gap: 6px;
             }
 
             .variety-trigger.is-selected .variety-trigger-label {
@@ -354,6 +355,7 @@
             position: relative;
             overflow: visible;
             z-index: 2;
+            padding-bottom: calc(18px + var(--variety-helper-space));
         }
 
         .ag-selector-card.is-panel-open {
@@ -367,7 +369,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-top: 14px;
+            margin-top: 41px;
             padding: 14px;
             border: 1px solid var(--neutral-200);
             border-radius: 24px;
@@ -550,7 +552,7 @@
             }
 
             .selector-trigger {
-                min-height: 96px;
+                min-height: 108px;
             }
 
             .selector-option {
@@ -560,6 +562,14 @@
 
         .stats-grid.stats-grid-inputs .stat-card-tons {
             grid-column: 1 / -1 !important;
+        }
+        .dashboard-container > .panel + .panel {
+            margin-top: 20px;
+        }
+        @media (max-width: 840px) {
+            .ag-selector-card {
+                padding-bottom: calc(16px + var(--variety-helper-space));
+            }
         }
     </style>
 </head>
