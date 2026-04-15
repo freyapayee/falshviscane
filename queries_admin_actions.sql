@@ -1,5 +1,7 @@
 -- Connect with:
 -- docker compose exec db psql -U user -d viscane_db
+-- Run with:
+-- docker compose exec -T db psql -U user -d viscane_db < queries_admin_actions.sql
 -- This file changes data. Run individual statements carefully.
 
 -- Update farmer status

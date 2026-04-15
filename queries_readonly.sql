@@ -1,5 +1,7 @@
 -- Connect with:
 -- docker compose exec db psql -U user -d viscane_db
+-- Run with:
+-- docker compose exec -T db psql -U user -d viscane_db < queries_readonly.sql
 -- Safe to run for inspection only.
 
 -- Inspect
