@@ -245,10 +245,7 @@
                                     <td>{{ user.email }}</td>
                                     <td>{{ user.phone }}</td>
                                     <td>
-                                        <form method="POST" action="/superadmin/users/restore">
-                                            <input type="hidden" name="user_id" value="{{ user.id }}">
-                                            <button class="tag success" type="submit" onclick="return confirm('Restore this user to the active registry?')">Restore</button>
-                                        </form>
+                                        <a class="tag superadmin-tag" href="/superadmin/users/{{ user.id }}">See Details</a>
                                     </td>
                                 </tr>
                             {% endfor %}

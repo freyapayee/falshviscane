@@ -2215,6 +2215,64 @@ def superadmin_archive_user():
         log_audit(f"User account archived: {user.fullname}", user_id=current_admin.id if current_admin else None)
     return redirect(url_for('superadmin_portal'))
 
+@app.route('/superadmin/users/<int:user_id>')
+@role_required('superadmin')
+def superadmin_user_details(user_id):
+    user = User.query.get_or_404(user_id)
+    scans = Scan.query.filter_by(user_id=user.id).order_by(Scan.created_at.desc()).all()
+    agronomic_logs = AgronomicLog.query.filter_by(user_id=user.id).order_by(AgronomicLog.created_at.desc()).all()
+    feedback_entries = Feedback.query.filter_by(user_id=user.id).order_by(Feedback.created_at.desc()).all()
+    audit_logs = AuditLog.query.filter(
+        AuditLog.action.ilike(f"%{user.fullname}%")
+    ).order_by(AuditLog.timestamp.desc()).all()
+
+    activity_items = []
+    for scan in scans:
+        activity_items.append({
+            'kind': 'Scan',
+            'title': scan.plot_name,
+            'meta': f"Grade {scan.grade} | Maturity {scan.maturity_pct}% | Status {scan.status.title()}",
+            'timestamp': scan.created_at,
+        })
+    for log in agronomic_logs:
+        activity_items.append({
+            'kind': 'Agronomic Log',
+            'title': log.variety or 'Agronomic entry',
+            'meta': f"Hectares {log.hectares or 'N/A'} | Predicted LKG {round(log.predicted_lkg, 2) if log.predicted_lkg is not None else 'N/A'}",
+            'timestamp': log.created_at,
+        })
+    for entry in feedback_entries:
+        preview = entry.message[:90] + ('...' if len(entry.message) > 90 else '')
+        activity_items.append({
+            'kind': 'Feedback',
+            'title': 'Farmer feedback submitted',
+            'meta': preview,
+            'timestamp': entry.created_at,
+        })
+    for log in audit_logs:
+        activity_items.append({
+            'kind': 'Audit',
+            'title': log.action,
+            'meta': f"Actor ID: {log.user_id if log.user_id is not None else 'System'}",
+            'timestamp': log.timestamp,
+        })
+
+    activity_items.sort(
+        key=lambda item: item['timestamp'] or datetime.min,
+        reverse=True,
+    )
+
+    return render_template(
+        'superadmin_user_details.html',
+        user=user,
+        scans=scans,
+        agronomic_logs=agronomic_logs,
+        feedback_entries=feedback_entries,
+        audit_logs=audit_logs,
+        activity_items=activity_items[:25],
+        current_admin=get_current_admin(),
+    )
+
 @app.route('/superadmin/users/restore', methods=['POST'])
 @role_required('superadmin')
 def superadmin_restore_user():
