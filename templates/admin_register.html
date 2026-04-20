@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>VISCANE | Admin Registration</title>
+</head>
+<body>
+    <div class="card fade-in">
+        <div style="text-align: center;">
+            <div style="background: #1E5BBF; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 8px 20px rgba(0,0,0,0.2);">
+                <ion-icon name="person-add-outline" style="font-size: 30px;"></ion-icon>
+            </div>
+            <h2 style="margin: 15px 0 5px;">Admin Registration</h2>
+            <p style="color: rgba(255,255,255,0.6); font-size: 13px;">Create an Admin or Superadmin account</p>
+        </div>
+
+        {% if error %}
+            <div class="form-error">{{ error }}</div>
+        {% endif %}
+
+        <form class="fade-in" method="POST" action="/admin-register">
+            <div class="input-wrapper">
+                <ion-icon name="person-outline"></ion-icon>
+                <input type="text" name="username" placeholder="Username" required>
+            </div>
+            <div class="input-wrapper">
+                <ion-icon name="mail-outline"></ion-icon>
+                <input type="email" name="email" placeholder="Email" required>
+            </div>
+            <div class="input-wrapper">
+                <ion-icon name="shield-checkmark-outline"></ion-icon>
+                <select name="role" required>
+                    <option value="admin">Admin</option>
+                    <option value="superadmin">Superadmin</option>
+                </select>
+            </div>
+            <div class="input-wrapper">
+                <ion-icon name="lock-closed-outline"></ion-icon>
+                <input type="password" name="password" placeholder="Password (min 8 chars)" required>
+            </div>
+            <div class="input-wrapper">
+                <ion-icon name="lock-closed-outline"></ion-icon>
+                <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+            </div>
+
+            <button type="submit" class="primary-btn">
+                Create Account
+            </button>
+        </form>
+
+        <div class="admin-login-footer">
+            <a href="/admin-login" class="admin-login-back-link">&larr; Back to Admin Login</a>
+        </div>
+    </div>
+</body>
+</html>

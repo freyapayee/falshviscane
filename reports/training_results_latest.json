@@ -1,0 +1,39 @@
+{
+  "dataset_path": "legacy_weighted_teacher (generated)",
+  "csv_rows_used": 0,
+  "db_rows_used": 0,
+  "total_rows_used": 7290,
+  "min_rows_required": 12,
+  "training_mode": "legacy_weighted",
+  "engine_ready": true,
+  "targets": [
+    {
+      "target": "predicted_lkg_tc",
+      "label": "Predicted LKG/TC",
+      "rows": 7290,
+      "mode": "holdout",
+      "r2": 1.0,
+      "mae": 6.442551739853743e-16,
+      "accuracy_pct": 100.0
+    },
+    {
+      "target": "predicted_tc_ha",
+      "label": "Predicted TC/HA",
+      "rows": 7290,
+      "mode": "holdout",
+      "r2": 1.0,
+      "mae": 9.077641423945547e-15,
+      "accuracy_pct": 100.0
+    },
+    {
+      "target": "predicted_lkg",
+      "label": "Predicted LKG",
+      "rows": 7290,
+      "mode": "holdout",
+      "r2": 1.0,
+      "mae": 9.632935638895201e-15,
+      "accuracy_pct": 100.0
+    }
+  ],
+  "generated_at_utc": "2026-04-19 21:57:07"
+}

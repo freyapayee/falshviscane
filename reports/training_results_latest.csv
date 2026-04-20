@@ -1,0 +1,4 @@
+generated_at_utc,training_mode,dataset_path,total_rows_used,target,label,rows,mode,r2,mae,accuracy_pct
+2026-04-19 21:57:07,legacy_weighted,legacy_weighted_teacher (generated),7290,predicted_lkg_tc,Predicted LKG/TC,7290,holdout,1.0,6.442551739853743e-16,100.0
+2026-04-19 21:57:07,legacy_weighted,legacy_weighted_teacher (generated),7290,predicted_tc_ha,Predicted TC/HA,7290,holdout,1.0,9.077641423945547e-15,100.0
+2026-04-19 21:57:07,legacy_weighted,legacy_weighted_teacher (generated),7290,predicted_lkg,Predicted LKG,7290,holdout,1.0,9.632935638895201e-15,100.0

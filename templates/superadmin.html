@@ -94,6 +94,27 @@
                     </div>
                     <span class="badge superadmin-badge"><ion-icon name="lock-closed-outline"></ion-icon>Restricted</span>
                 </div>
+                {% if create_success %}
+                    <div class="form-success">{{ create_success }}</div>
+                {% endif %}
+                {% if create_error %}
+                    <div class="form-error">{{ create_error }}</div>
+                {% endif %}
+                <form method="POST" action="/superadmin/admins/create" style="margin-bottom: 16px;">
+                    <div class="stat-label">Register Admin or Superadmin</div>
+                    <input class="stat-input" type="text" name="username" placeholder="Username" required>
+                    <input class="stat-input" type="email" name="email" placeholder="Email" required style="margin-top: 10px;">
+                    <select class="stat-input" name="role" required style="margin-top: 10px;">
+                        <option value="admin">Admin</option>
+                        <option value="superadmin">Superadmin</option>
+                    </select>
+                    <input class="stat-input" type="password" name="password" placeholder="Password (min 8 chars)" required style="margin-top: 10px;">
+                    <input class="stat-input" type="password" name="confirm_password" placeholder="Confirm Password" required style="margin-top: 10px;">
+                    <button class="btn primary" type="submit" style="margin-top: 12px;">
+                        <ion-icon name="person-add-outline"></ion-icon>
+                        Register Account
+                    </button>
+                </form>
                 {% if admins %}
                     {% for admin in admins %}
                         <div class="list-row superadmin-list-row">

@@ -20,6 +20,9 @@
         {% if error %}
             <div class="form-error">{{ error }}</div>
         {% endif %}
+        {% if success %}
+            <div class="form-success">{{ success }}</div>
+        {% endif %}
 
         <form class="fade-in" method="POST" action="/admin-login">
             <div class="input-wrapper">
@@ -38,6 +41,9 @@
 
         <div class="admin-login-link-row">
             <a href="/admin-reset" class="admin-login-link">Forgot password?</a>
+        </div>
+        <div class="admin-login-link-row">
+            <a href="/admin-register" class="admin-login-link">Admin registration</a>
         </div>
 
         <div class="admin-login-footer">

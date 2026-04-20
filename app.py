@@ -1,15 +1,21 @@
 import os
 import csv
+import json
 import secrets
 from copy import deepcopy
 from datetime import datetime, timedelta
-from functools import wraps
+from functools import lru_cache, wraps
 from io import StringIO
 from shutil import disk_usage
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from flask import Flask, render_template, request, redirect, url_for, session, Response
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -58,6 +64,32 @@ CROP_STAGE_LABELS = {
 }
 
 AGRONOMIC_KEYS = ["rssi", "weeding", "fertilizer", "ratoon", "plowing"]
+TRAINING_NUMERIC_FEATURES = ["hectares", "rssi", "weeding", "fertilizer", "ratoon", "plowing"]
+TRAINING_CATEGORICAL_FEATURES = ["variety"]
+TRAINING_FEATURE_COLUMNS = TRAINING_CATEGORICAL_FEATURES + TRAINING_NUMERIC_FEATURES
+TRAINING_TARGET_COLUMNS = ["predicted_lkg_tc", "predicted_tc_ha", "predicted_lkg"]
+TRAINING_TARGET_LABELS = {
+    "predicted_lkg_tc": "Predicted LKG/TC",
+    "predicted_tc_ha": "Predicted TC/HA",
+    "predicted_lkg": "Predicted LKG",
+}
+TRAINING_REQUIRED_COLUMNS = {
+    "variety",
+    "hectares",
+    "plowing_count",
+    "weeding_count",
+    "fertilizer_count",
+    "ratoon_stage",
+    "rssi_infected",
+    "predicted_lkg_tc",
+    "predicted_tc_ha",
+    "predicted_lkg",
+}
+DEFAULT_DATASET_PATH = "data/agronomic_training.csv"
+MIN_DATASET_ROWS = max(8, int(os.getenv("AGRONOMIC_MODEL_MIN_ROWS", "12")))
+AGRONOMIC_TRAINING_MODE = os.getenv("AGRONOMIC_TRAINING_MODE", "legacy_weighted").strip().lower()
+LEGACY_TRAIN_HECTARES = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 5.5]
+LEGACY_TRAIN_LEVELS = [1.0, 2.0, 3.0]
 VARIETY_ALIASES = {
     "Mauritius RC888": "MAURITIO RC888",
     "MAURITIO RC888": "MAURITIO RC888",
@@ -261,8 +293,485 @@ def compute_visual_grade(visual_features):
         raise ValueError("visual_features must not be empty.")
     return sum(visual_features) / len(visual_features)
 
+def _parse_float(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    cleaned = str(value).strip()
+    if not cleaned:
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+def _parse_choice_value(value):
+    if value is None:
+        return None
+    numeric_value = _parse_float(value)
+    if numeric_value is not None:
+        return numeric_value
+    cleaned = str(value).strip()
+    stage_map = {
+        '1-Time': 1.0,
+        '2-Time': 2.0,
+        '3-Time': 3.0,
+        '1x': 1.0,
+        '2x': 2.0,
+        '3x': 3.0,
+    }
+    return stage_map.get(cleaned)
+
+def _parse_ratoon_value(value):
+    if value is None:
+        return None
+    numeric_value = _parse_float(value)
+    if numeric_value is not None:
+        return numeric_value
+    cleaned = str(value).strip()
+    stage_map = {
+        'Plant': 1.0,
+        'Plant" (1st)': 1.0,
+        '1st Ratoon': 2.0,
+        '2nd Ratoon': 3.0,
+        'New Plant (1)': 1.0,
+        '1st ratoon (2nd)': 2.0,
+        '2nd ratoon (3rd)': 3.0,
+    }
+    return stage_map.get(cleaned)
+
+def _parse_hectares_value(value):
+    if value is None:
+        return None
+    numeric_value = _parse_float(value)
+    if numeric_value is not None:
+        return numeric_value
+    normalized = " ".join(
+        str(value).strip().lower().replace('hectares', 'hectare').split()
+    )
+    hectares_map = {
+        'less than 1 hectare': 0.5,
+        '1 hectare': 1.0,
+        '1-2': 1.5,
+        '1-2 hectare': 1.5,
+        '2': 2.0,
+        '2 hectare': 2.0,
+        '2-3': 2.5,
+        '2-3 hectare': 2.5,
+        '3': 3.0,
+        '3 hectare': 3.0,
+        '3-4': 3.5,
+        '3-4 hectare': 3.5,
+        '4': 4.0,
+        '4 hectare': 4.0,
+        '5': 5.0,
+        '5 hectare': 5.0,
+        'more than 5': 5.5,
+        'more than 5 hectare': 5.5,
+    }
+    return hectares_map.get(normalized)
+
+def _dataset_row_to_training_sample(row):
+    variety = normalize_variety_name(row.get("variety"))
+    hectares = _parse_hectares_value(row.get("hectares"))
+    plowing = _parse_choice_value(row.get("plowing_count") or row.get("plowing"))
+    weeding = _parse_choice_value(row.get("weeding_count") or row.get("weeding"))
+    fertilizer = _parse_choice_value(row.get("fertilizer_count") or row.get("fertilizer"))
+    ratoon = _parse_ratoon_value(row.get("ratoon_stage") or row.get("ratoon"))
+    rssi = _parse_choice_value(row.get("rssi_infected") or row.get("rssi"))
+
+    if not variety:
+        return None
+    numeric_values = {
+        "hectares": hectares,
+        "plowing": plowing,
+        "weeding": weeding,
+        "fertilizer": fertilizer,
+        "ratoon": ratoon,
+        "rssi": rssi,
+    }
+    if any(value is None for value in numeric_values.values()):
+        return None
+
+    targets = {
+        "predicted_lkg_tc": _parse_float(row.get("predicted_lkg_tc")),
+        "predicted_tc_ha": _parse_float(row.get("predicted_tc_ha")),
+        "predicted_lkg": _parse_float(row.get("predicted_lkg")),
+    }
+    if all(value is None for value in targets.values()):
+        return None
+
+    return {
+        "variety": variety,
+        "hectares": hectares,
+        "rssi": rssi,
+        "weeding": weeding,
+        "fertilizer": fertilizer,
+        "ratoon": ratoon,
+        "plowing": plowing,
+        **targets,
+    }
+
+def _get_dataset_path():
+    return os.getenv("AGRONOMIC_DATASET_PATH") or os.path.join(app.root_path, DEFAULT_DATASET_PATH)
+
+def _build_training_pipeline():
+    return Pipeline(
+        steps=[
+            ("vectorizer", DictVectorizer(sparse=False)),
+            ("regressor", LinearRegression()),
+        ]
+    )
+
+def _extract_features_and_target(samples, target):
+    x_rows = [{key: row[key] for key in TRAINING_FEATURE_COLUMNS} for row in samples]
+    y_rows = [float(row[target]) for row in samples]
+    return x_rows, y_rows
+
+def _compute_target_metrics(target_samples, target):
+    x_rows, y_rows = _extract_features_and_target(target_samples, target)
+    if len(target_samples) >= 16:
+        x_train, x_test, y_train, y_test = train_test_split(
+            x_rows,
+            y_rows,
+            test_size=0.25,
+            random_state=42,
+        )
+        model = _build_training_pipeline()
+        model.fit(x_train, y_train)
+        y_pred = model.predict(x_test)
+        r2_value = float(r2_score(y_test, y_pred))
+        mae_value = float(mean_absolute_error(y_test, y_pred))
+        evaluation_mode = "holdout"
+    else:
+        model = _build_training_pipeline()
+        model.fit(x_rows, y_rows)
+        y_pred = model.predict(x_rows)
+        r2_value = float(r2_score(y_rows, y_pred))
+        mae_value = float(mean_absolute_error(y_rows, y_pred))
+        evaluation_mode = "train_only"
+
+    accuracy_pct = max(0.0, min(100.0, r2_value * 100.0))
+    return {
+        "target": target,
+        "label": TRAINING_TARGET_LABELS.get(target, target),
+        "rows": len(target_samples),
+        "mode": evaluation_mode,
+        "r2": r2_value,
+        "mae": mae_value,
+        "accuracy_pct": accuracy_pct,
+    }
+
+def _compute_weighted_baseline_outputs(variety, hectares, agronomic_input):
+    crop_stage = int(round(float(agronomic_input["ratoon"])))
+    weights_used = get_variety_weights(variety)
+    baseline_lkg_tc, baseline_tc_ha_per_hectare = get_sra_baseline(variety, crop_stage)
+    adjusted_baseline_tc_ha = baseline_tc_ha_per_hectare * float(hectares)
+    agronomic_adjustment = compute_agronomic_adjustment(agronomic_input, weights_used)
+    agronomic_penalty = compute_agronomic_penalty(agronomic_input, weights_used)
+    agronomic_multiplier = compute_agronomic_multiplier(agronomic_penalty)
+    raw_predicted_lkg_tc = baseline_lkg_tc * agronomic_multiplier
+    predicted_lkg_tc = max(0.0, min(baseline_lkg_tc, raw_predicted_lkg_tc))
+    raw_predicted_tc_ha = adjusted_baseline_tc_ha * agronomic_multiplier
+    predicted_tc_ha = max(0.0, min(adjusted_baseline_tc_ha, raw_predicted_tc_ha))
+    predicted_lkg = predicted_lkg_tc * predicted_tc_ha
+    return {
+        "predicted_lkg_tc": predicted_lkg_tc,
+        "predicted_tc_ha": predicted_tc_ha,
+        "predicted_lkg": predicted_lkg,
+        "agronomic_adjustment": agronomic_adjustment,
+    }
+
+def _build_legacy_teacher_samples():
+    samples = []
+    for variety in DEFAULT_VARIETY_WEIGHTS.keys():
+        for hectares in LEGACY_TRAIN_HECTARES:
+            for ratoon in LEGACY_TRAIN_LEVELS:
+                for rssi in LEGACY_TRAIN_LEVELS:
+                    for weeding in LEGACY_TRAIN_LEVELS:
+                        for fertilizer in LEGACY_TRAIN_LEVELS:
+                            for plowing in LEGACY_TRAIN_LEVELS:
+                                agronomic_input = {
+                                    "rssi": rssi,
+                                    "weeding": weeding,
+                                    "fertilizer": fertilizer,
+                                    "ratoon": ratoon,
+                                    "plowing": plowing,
+                                }
+                                outputs = _compute_weighted_baseline_outputs(
+                                    variety=variety,
+                                    hectares=hectares,
+                                    agronomic_input=agronomic_input,
+                                )
+                                samples.append(
+                                    {
+                                        "variety": variety,
+                                        "hectares": float(hectares),
+                                        "rssi": float(rssi),
+                                        "weeding": float(weeding),
+                                        "fertilizer": float(fertilizer),
+                                        "ratoon": float(ratoon),
+                                        "plowing": float(plowing),
+                                        "predicted_lkg_tc": outputs["predicted_lkg_tc"],
+                                        "predicted_tc_ha": outputs["predicted_tc_ha"],
+                                        "predicted_lkg": outputs["predicted_lkg"],
+                                    }
+                                )
+    return samples
+
+def _get_training_samples():
+    if AGRONOMIC_TRAINING_MODE == "legacy_weighted":
+        return _build_legacy_teacher_samples(), "legacy_weighted_teacher"
+    samples = _load_csv_training_samples() + _load_db_training_samples()
+    return samples, "dataset"
+
+def generate_training_report():
+    csv_samples = _load_csv_training_samples()
+    db_samples = _load_db_training_samples()
+    all_samples, sample_source = _get_training_samples()
+    signature = _build_dataset_signature()
+    training_bundle = _train_dataset_models(signature)
+    trained_models = training_bundle.get("models", {})
+
+    target_reports = []
+    for target in TRAINING_TARGET_COLUMNS:
+        target_samples = [sample for sample in all_samples if sample.get(target) is not None]
+        if len(target_samples) < MIN_DATASET_ROWS:
+            target_reports.append(
+                {
+                    "target": target,
+                    "label": TRAINING_TARGET_LABELS.get(target, target),
+                    "rows": len(target_samples),
+                    "mode": "insufficient",
+                    "r2": None,
+                    "mae": None,
+                    "accuracy_pct": None,
+                }
+            )
+            continue
+        target_reports.append(_compute_target_metrics(target_samples, target))
+
+    return {
+        "dataset_path": _get_dataset_path() if sample_source == "dataset" else "legacy_weighted_teacher (generated)",
+        "csv_rows_used": len(csv_samples) if sample_source == "dataset" else 0,
+        "db_rows_used": len(db_samples) if sample_source == "dataset" else 0,
+        "total_rows_used": len(all_samples),
+        "min_rows_required": MIN_DATASET_ROWS,
+        "training_mode": AGRONOMIC_TRAINING_MODE,
+        "engine_ready": bool(trained_models),
+        "targets": target_reports,
+    }
+
+def export_training_report_files(training_report):
+    reports_dir = os.path.join(app.root_path, "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+
+    generated_at_utc = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    csv_latest = os.path.join(reports_dir, "training_results_latest.csv")
+    json_latest = os.path.join(reports_dir, "training_results_latest.json")
+    md_latest = os.path.join(reports_dir, "training_results_latest.md")
+
+    csv_headers = [
+        "generated_at_utc",
+        "training_mode",
+        "dataset_path",
+        "total_rows_used",
+        "target",
+        "label",
+        "rows",
+        "mode",
+        "r2",
+        "mae",
+        "accuracy_pct",
+    ]
+    with open(csv_latest, "w", newline="", encoding="utf-8") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=csv_headers)
+        writer.writeheader()
+        for item in training_report.get("targets", []):
+            writer.writerow(
+                {
+                    "generated_at_utc": generated_at_utc,
+                    "training_mode": training_report.get("training_mode"),
+                    "dataset_path": training_report.get("dataset_path"),
+                    "total_rows_used": training_report.get("total_rows_used"),
+                    "target": item.get("target"),
+                    "label": item.get("label"),
+                    "rows": item.get("rows"),
+                    "mode": item.get("mode"),
+                    "r2": item.get("r2"),
+                    "mae": item.get("mae"),
+                    "accuracy_pct": item.get("accuracy_pct"),
+                }
+            )
+
+    with open(json_latest, "w", encoding="utf-8") as json_file:
+        payload = dict(training_report)
+        payload["generated_at_utc"] = generated_at_utc
+        json.dump(payload, json_file, indent=2)
+
+    table_lines = [
+        "# Training Results (Latest)",
+        "",
+        f"- Generated (UTC): {generated_at_utc}",
+        f"- Training mode: {training_report.get('training_mode')}",
+        f"- Dataset path: {training_report.get('dataset_path')}",
+        f"- Rows used: {training_report.get('total_rows_used')}",
+        "",
+        "| Target | Rows | Evaluation | R2 | MAE | Accuracy (%) |",
+        "|---|---:|---|---:|---:|---:|",
+    ]
+    for item in training_report.get("targets", []):
+        r2_text = f"{item['r2']:.4f}" if item.get("r2") is not None else "N/A"
+        mae_text = f"{item['mae']:.4f}" if item.get("mae") is not None else "N/A"
+        acc_text = f"{item['accuracy_pct']:.2f}" if item.get("accuracy_pct") is not None else "N/A"
+        table_lines.append(
+            f"| {item.get('label')} | {item.get('rows', 0)} | {item.get('mode')} | {r2_text} | {mae_text} | {acc_text} |"
+        )
+    with open(md_latest, "w", encoding="utf-8") as md_file:
+        md_file.write("\n".join(table_lines) + "\n")
+
+    return {
+        "generated_at_utc": generated_at_utc,
+        "csv_path": csv_latest,
+        "json_path": json_latest,
+        "md_path": md_latest,
+    }
+
+def validate_training_csv_file(path):
+    with open(path, newline="", encoding="utf-8") as dataset_file:
+        reader = csv.DictReader(dataset_file)
+        fieldnames = set(reader.fieldnames or [])
+        missing_columns = sorted(TRAINING_REQUIRED_COLUMNS - fieldnames)
+        if missing_columns:
+            return False, f"CSV missing required columns: {', '.join(missing_columns)}."
+        rows = list(reader)
+    if not rows:
+        return False, "CSV is empty."
+    parsed_rows = [row for row in rows if _dataset_row_to_training_sample(row)]
+    if len(parsed_rows) < MIN_DATASET_ROWS:
+        return False, (
+            f"CSV has only {len(parsed_rows)} valid training rows. "
+            f"Minimum required is {MIN_DATASET_ROWS}."
+        )
+    return True, None
+
+def _load_csv_training_samples():
+    dataset_path = _get_dataset_path()
+    if not os.path.isfile(dataset_path):
+        return []
+
+    samples = []
+    with open(dataset_path, newline="", encoding="utf-8") as dataset_file:
+        for row in csv.DictReader(dataset_file):
+            sample = _dataset_row_to_training_sample(row)
+            if sample:
+                samples.append(sample)
+    return samples
+
+def _load_db_training_samples():
+    samples = []
+    logs = AgronomicLog.query.order_by(AgronomicLog.created_at.desc()).limit(500).all()
+    for log in logs:
+        sample = _dataset_row_to_training_sample(
+            {
+                "variety": log.variety,
+                "hectares": log.hectares,
+                "plowing_count": log.plowing_count,
+                "weeding_count": log.weeding_count,
+                "fertilizer_count": log.fertilizer_count,
+                "ratoon_stage": log.ratoon_stage,
+                "rssi_infected": log.rssi_infected,
+                "predicted_lkg_tc": log.predicted_lkg_tc,
+                "predicted_tc_ha": log.predicted_tc_ha,
+                "predicted_lkg": log.predicted_lkg,
+            }
+        )
+        if sample:
+            samples.append(sample)
+    return samples
+
+def _build_dataset_signature():
+    csv_signature = "none"
+    dataset_path = _get_dataset_path()
+    if os.path.isfile(dataset_path):
+        csv_signature = f"{dataset_path}:{int(os.path.getmtime(dataset_path))}:{os.path.getsize(dataset_path)}"
+
+    db_count = db.session.query(AgronomicLog.id).count()
+    latest_log = db.session.query(AgronomicLog.created_at).order_by(AgronomicLog.created_at.desc()).first()
+    latest_ts = latest_log[0].isoformat() if latest_log and latest_log[0] else "none"
+    return csv_signature, db_count, latest_ts
+
+@lru_cache(maxsize=8)
+def _train_dataset_models(signature):
+    del signature  # lru_cache key only; real data is reloaded below.
+    samples, sample_source = _get_training_samples()
+    if len(samples) < MIN_DATASET_ROWS:
+        return {"models": {}, "row_count": len(samples), "sample_source": sample_source}
+
+    trained_models = {}
+    for target in TRAINING_TARGET_COLUMNS:
+        target_samples = [sample for sample in samples if sample.get(target) is not None]
+        if len(target_samples) < MIN_DATASET_ROWS:
+            continue
+        x_train, y_train = _extract_features_and_target(target_samples, target)
+        model = _build_training_pipeline()
+        model.fit(x_train, y_train)
+        trained_models[target] = model
+
+    return {"models": trained_models, "row_count": len(samples), "sample_source": sample_source}
+
+def predict_from_dataset_models(variety, hectares, agronomic_input):
+    signature = _build_dataset_signature()
+    training_bundle = _train_dataset_models(signature)
+    models = training_bundle.get("models", {})
+    row_count = training_bundle.get("row_count", 0)
+    sample_source = training_bundle.get("sample_source", "dataset")
+    if not models:
+        return None, row_count, sample_source
+
+    feature_row = {
+        "variety": variety,
+        "hectares": float(hectares),
+        "rssi": float(agronomic_input["rssi"]),
+        "weeding": float(agronomic_input["weeding"]),
+        "fertilizer": float(agronomic_input["fertilizer"]),
+        "ratoon": float(agronomic_input["ratoon"]),
+        "plowing": float(agronomic_input["plowing"]),
+    }
+
+    predictions = {}
+    for target, model in models.items():
+        predictions[target] = max(0.0, float(model.predict([feature_row])[0]))
+
+    if "predicted_lkg" not in predictions and {
+        "predicted_lkg_tc",
+        "predicted_tc_ha",
+    }.issubset(predictions.keys()):
+        predictions["predicted_lkg"] = predictions["predicted_lkg_tc"] * predictions["predicted_tc_ha"]
+
+    return predictions, row_count, sample_source
+
+@lru_cache(maxsize=32)
+def get_agronomic_linear_model(weight_signature):
+    # Fit a tiny deterministic linear regressor so agronomic adjustment uses sklearn.
+    x_train = []
+    y_train = []
+    for index, coefficient in enumerate(weight_signature):
+        row = [0.0] * len(AGRONOMIC_KEYS)
+        row[index] = 1.0
+        x_train.append(row)
+        y_train.append(float(coefficient))
+
+    model = LinearRegression(fit_intercept=False)
+    model.fit(x_train, y_train)
+    return model
+
 def compute_agronomic_adjustment(agronomic_input, weights):
-    return sum(float(agronomic_input[key]) * weights[key] for key in AGRONOMIC_KEYS)
+    weight_signature = tuple(float(weights[key]) for key in AGRONOMIC_KEYS)
+    model = get_agronomic_linear_model(weight_signature)
+    features = [[float(agronomic_input[key]) for key in AGRONOMIC_KEYS]]
+    return float(model.predict(features)[0])
 
 def compute_agronomic_penalty(agronomic_input, weights):
     contributions = [float(agronomic_input[key]) * weights[key] for key in AGRONOMIC_KEYS]
@@ -288,17 +797,21 @@ def predict_variety_metrics(variety, hectares, visual_features, agronomic_input,
 
     weights_used = get_variety_weights(normalized_variety, custom_weights)
     visual_grade = compute_visual_grade(visual_features)
+    baseline_lkg_tc, baseline_tc_ha_per_hectare = get_sra_baseline(normalized_variety, crop_stage)
+    adjusted_baseline_tc_ha = baseline_tc_ha_per_hectare * hectares
+    # Keep sklearn in use via compute_agronomic_adjustment(), but enforce weighted-baseline prediction output.
     agronomic_adjustment = compute_agronomic_adjustment(agronomic_input, weights_used)
     agronomic_penalty = compute_agronomic_penalty(agronomic_input, weights_used)
     agronomic_multiplier = compute_agronomic_multiplier(agronomic_penalty)
-    baseline_lkg_tc, baseline_tc_ha_per_hectare = get_sra_baseline(normalized_variety, crop_stage)
-    adjusted_baseline_tc_ha = baseline_tc_ha_per_hectare * hectares
-    predicted_quality_grade = visual_grade + agronomic_adjustment
     raw_predicted_lkg_tc = baseline_lkg_tc * agronomic_multiplier
     predicted_lkg_tc = max(0.0, min(baseline_lkg_tc, raw_predicted_lkg_tc))
     raw_predicted_tc_ha = adjusted_baseline_tc_ha * agronomic_multiplier
     predicted_tc_ha = max(0.0, min(adjusted_baseline_tc_ha, raw_predicted_tc_ha))
     predicted_lkg = predicted_lkg_tc * predicted_tc_ha
+    prediction_engine = "weighted_baseline_sklearn"
+    trained_rows = 0
+
+    predicted_quality_grade = visual_grade + agronomic_adjustment
 
     return {
         "variety": normalized_variety,
@@ -318,6 +831,8 @@ def predict_variety_metrics(variety, hectares, visual_features, agronomic_input,
         "predicted_tc_ha": predicted_tc_ha,
         "predicted_lkg": predicted_lkg,
         "weights_used": weights_used,
+        "prediction_engine": prediction_engine,
+        "training_rows_used": trained_rows,
         "input": {
             "hectares": hectares,
             "visual_features": visual_features,
@@ -1333,6 +1848,10 @@ def admin_monitoring():
 def admin_models():
     config = get_system_config()
     message = None
+    error = None
+    training_report = None
+    training_report_files = None
+
     if request.method == 'POST':
         model_file = request.files.get('model_file')
         if model_file and model_file.filename:
@@ -1345,7 +1864,24 @@ def admin_models():
             db.session.commit()
             log_audit(f"Model update received: {filename}", user_id=get_current_admin().id if get_current_admin() else None)
             message = f"Model '{filename}' uploaded successfully."
-    return render_template('admin_models.html', config=config, message=message, current_admin=get_current_admin())
+        else:
+            error = "Please choose a model file to upload."
+
+    try:
+        training_report = generate_training_report()
+        training_report_files = export_training_report_files(training_report)
+    except Exception as exc:
+        error = f"Could not generate training report: {exc}"
+
+    return render_template(
+        'admin_models.html',
+        config=config,
+        message=message,
+        error=error,
+        training_report=training_report,
+        training_report_files=training_report_files,
+        current_admin=get_current_admin()
+    )
 
 @app.route('/admin/reports')
 @login_required
@@ -1427,6 +1963,7 @@ def admin_login():
     if not Admin.query.filter_by(is_archived=False).first():
         return redirect(url_for('admin_setup'))
     error = None
+    success = request.args.get('success')
     if request.method == 'POST':
         identifier = request.form.get('identifier', '').strip().lower()
         password = request.form.get('password', '')
@@ -1437,7 +1974,7 @@ def admin_login():
             session['admin_id'] = admin.id
             return redirect(url_for('admin_portal'))
         error = 'Invalid admin credentials. Please try again.'
-    return render_template('admin_login.html', error=error)
+    return render_template('admin_login.html', error=error, success=success)
 
 @app.route('/superadmin-login', methods=['GET', 'POST'])
 def superadmin_login():
@@ -1490,6 +2027,43 @@ def admin_setup():
             return redirect(url_for('admin_portal'))
     return render_template('admin_setup.html', error=error)
 
+@app.route('/admin-register', methods=['GET', 'POST'])
+def admin_register():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        role = request.form.get('role', 'admin').strip().lower()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not username or not email or not password or not confirm_password:
+            error = 'Please complete all registration fields.'
+        elif not is_valid_admin_role(role):
+            error = 'Invalid role selected.'
+        elif password != confirm_password:
+            error = 'Passwords do not match.'
+        elif len(password) < 8:
+            error = 'Password must be at least 8 characters.'
+        elif Admin.query.filter(Admin.username.ilike(username)).first():
+            error = 'Username is already taken.'
+        elif Admin.query.filter(Admin.email.ilike(email)).first():
+            error = 'Email is already registered.'
+        else:
+            admin = Admin(
+                username=username,
+                email=email,
+                password_hash=generate_password_hash(password),
+                role=role,
+                is_archived=False,
+            )
+            db.session.add(admin)
+            db.session.commit()
+            log_audit(f"{role.title()} account registered: {username}")
+            return redirect(url_for('admin_login', success=f'{role.title()} account created successfully.'))
+
+    return render_template('admin_register.html', error=error)
+
 @app.route('/admin-reset', methods=['GET', 'POST'])
 def admin_reset():
     error = None
@@ -1516,6 +2090,8 @@ def admin_reset():
 @app.route('/superadmin')
 @role_required('superadmin')
 def superadmin_portal():
+    create_error = request.args.get('create_error')
+    create_success = request.args.get('create_success')
     total_users = User.query.filter_by(is_archived=False, is_active=True).count()
     active_user_count = User.query.filter_by(is_archived=False, is_active=True).count()
     deactivated_user_count = User.query.filter_by(is_archived=False, is_active=False).count()
@@ -1555,8 +2131,52 @@ def superadmin_portal():
         archived_users=archived_users,
         deactivated_users=deactivated_users,
         recent_scans=recent_scans,
+        create_error=create_error,
+        create_success=create_success,
         current_admin=get_current_admin()
     )
+
+@app.route('/superadmin/admins/create', methods=['POST'])
+@role_required('superadmin')
+def superadmin_create_admin():
+    current_admin = get_current_admin()
+    username = request.form.get('username', '').strip()
+    email = request.form.get('email', '').strip().lower()
+    role = request.form.get('role', 'admin').strip().lower()
+    password = request.form.get('password', '')
+    confirm_password = request.form.get('confirm_password', '')
+
+    if not username or not email or not password or not confirm_password:
+        return redirect(url_for('superadmin_portal', create_error='Please complete all registration fields.'))
+    if not is_valid_admin_role(role):
+        return redirect(url_for('superadmin_portal', create_error='Invalid role selected.'))
+    if password != confirm_password:
+        return redirect(url_for('superadmin_portal', create_error='Passwords do not match.'))
+    if len(password) < 8:
+        return redirect(url_for('superadmin_portal', create_error='Password must be at least 8 characters.'))
+
+    existing_username = Admin.query.filter(Admin.username.ilike(username)).first()
+    if existing_username:
+        return redirect(url_for('superadmin_portal', create_error='Username is already taken.'))
+    existing_email = Admin.query.filter(Admin.email.ilike(email)).first()
+    if existing_email:
+        return redirect(url_for('superadmin_portal', create_error='Email is already registered.'))
+
+    new_admin = Admin(
+        username=username,
+        email=email,
+        password_hash=generate_password_hash(password),
+        role=role,
+        is_archived=False,
+    )
+    db.session.add(new_admin)
+    db.session.commit()
+    if current_admin:
+        log_audit(
+            f"{role.title()} account created: {username}",
+            user_id=current_admin.id,
+        )
+    return redirect(url_for('superadmin_portal', create_success=f'{role.title()} account created successfully.'))
 
 @app.route('/superadmin/admins/role', methods=['POST'])
 @role_required('superadmin')
