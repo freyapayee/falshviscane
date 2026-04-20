@@ -9,31 +9,31 @@
   "targets": [
     {
       "target": "predicted_lkg_tc",
-      "label": "Predicted LKG/TC",
+      "label": "Estimated LKG/TC",
       "rows": 7290,
       "mode": "holdout",
-      "r2": 1.0,
-      "mae": 6.442551739853743e-16,
-      "accuracy_pct": 100.0
+      "r2": 0.7032306153486502,
+      "mae": 0.16866986935036868,
+      "accuracy_pct": 70.32306153486502
     },
     {
       "target": "predicted_tc_ha",
-      "label": "Predicted TC/HA",
+      "label": "Estimated TC/HA",
       "rows": 7290,
       "mode": "holdout",
-      "r2": 1.0,
-      "mae": 9.077641423945547e-15,
-      "accuracy_pct": 100.0
+      "r2": 0.5413626542993195,
+      "mae": 71.43345073661652,
+      "accuracy_pct": 54.13626542993195
     },
     {
       "target": "predicted_lkg",
-      "label": "Predicted LKG",
+      "label": "Estimated LKG",
       "rows": 7290,
       "mode": "holdout",
-      "r2": 1.0,
-      "mae": 9.632935638895201e-15,
-      "accuracy_pct": 100.0
+      "r2": 0.4773346655053179,
+      "mae": 65.39352483986058,
+      "accuracy_pct": 47.73346655053179
     }
   ],
-  "generated_at_utc": "2026-04-19 21:57:07"
+  "generated_at_utc": "2026-04-20 12:07:32"
 }

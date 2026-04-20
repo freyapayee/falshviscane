@@ -38,22 +38,21 @@
         <section class="panel">
             <div class="panel-header">
                 <div>
-                    <h3 class="panel-title">Latest Scans</h3>
-                    <p class="panel-subtitle">RGB inputs and predicted metrics</p>
+                    <h3 class="panel-title">Latest Prediction Logs</h3>
+                    <p class="panel-subtitle">User-input based LKG predictions</p>
                 </div>
                 <span class="badge"><ion-icon name="pulse-outline"></ion-icon>Live</span>
             </div>
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Plot</th>
-                        <th>Maturity</th>
-                        <th>Grade</th>
-                        <th>TCH</th>
-                        <th>LKG/TC</th>
-                        <th>Bags</th>
-                        <th>Trash %</th>
-                        <th>Status</th>
+                        <th>Farmer</th>
+                        <th>Variety</th>
+                        <th>Hectares</th>
+                        <th>Pred LKG/TC</th>
+                        <th>Pred LKG/HA</th>
+                        <th>Pred Total LKG</th>
+                        <th>RSSI</th>
                         <th>Captured</th>
                     </tr>
                 </thead>
@@ -61,24 +60,19 @@
                     {% if rows %}
                         {% for row in rows %}
                             <tr>
-                                <td>{{ row.plot_name }}</td>
-                                <td>{{ row.maturity_pct }}%</td>
-                                <td>{{ row.grade }}</td>
-                                <td>{{ row.tch }}</td>
-                                <td>{{ row.lkg_tc }}</td>
-                                <td>{{ row.bags }}</td>
-                                <td>{{ row.trash_pct }}%</td>
-                                <td>
-                                    <span class="tag {% if row.status == 'ready' %}success{% elif row.status == 'monitor' %}warning{% else %}alert{% endif %}">
-                                        {{ row.status }}
-                                    </span>
-                                </td>
+                                <td>{{ row.farmer_name }}</td>
+                                <td>{{ row.variety }}</td>
+                                <td>{{ row.hectares }}</td>
+                                <td>{{ row.predicted_lkg_tc if row.predicted_lkg_tc is not none else 'Pending' }}</td>
+                                <td>{{ row.predicted_tc_ha if row.predicted_tc_ha is not none else 'Pending' }}</td>
+                                <td>{{ row.predicted_lkg if row.predicted_lkg is not none else 'Pending' }}</td>
+                                <td>{{ row.rssi_infected }}</td>
                                 <td>{{ row.created_at.strftime('%b %d, %I:%M %p') }}</td>
                             </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="9">No scan data available.</td>
+                            <td colspan="8">No prediction data available.</td>
                         </tr>
                     {% endif %}
                 </tbody>

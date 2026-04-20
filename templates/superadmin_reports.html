@@ -46,14 +46,14 @@
                 <div class="stat-meta">Platform average</div>
             </div>
             <div class="stat-card accent-blue">
-                <div class="stat-label">Total Predicted Yield</div>
-                <div class="stat-value">{{ report.total_predicted_yield }}</div>
-                <div class="stat-meta">Estimated TCH units</div>
+                <div class="stat-label">Average LKG/HA</div>
+                <div class="stat-value">{{ report.avg_lkg_ha }}</div>
+                <div class="stat-meta">From user-input predictions</div>
             </div>
             <div class="stat-card accent-orange">
-                <div class="stat-label">Average Trash %</div>
-                <div class="stat-value">{{ report.avg_trash_pct }}%</div>
-                <div class="stat-meta">{{ report.total_scans }} scans analyzed</div>
+                <div class="stat-label">Total Estimated LKG</div>
+                <div class="stat-value">{{ report.total_estimated_lkg }}</div>
+                <div class="stat-meta">{{ report.total_predictions }} prediction logs</div>
             </div>
         </section>
 
@@ -71,12 +71,12 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Plot</th>
-                        <th>Grade</th>
-                        <th>Maturity</th>
-                        <th>TCH</th>
+                        <th>Farmer</th>
+                        <th>Variety</th>
+                        <th>Hectares</th>
                         <th>LKG/TC</th>
-                        <th>Trash %</th>
+                        <th>LKG/HA</th>
+                        <th>Total LKG</th>
                         <th>Captured</th>
                     </tr>
                 </thead>
@@ -84,18 +84,18 @@
                     {% if rows %}
                         {% for row in rows %}
                             <tr>
-                                <td>{{ row.plot_name }}</td>
-                                <td>{{ row.grade }}</td>
-                                <td>{{ row.maturity_pct }}%</td>
-                                <td>{{ row.tch }}</td>
-                                <td>{{ row.lkg_tc }}</td>
-                                <td>{{ row.trash_pct }}%</td>
+                                <td>{{ row.farmer_name }}</td>
+                                <td>{{ row.variety }}</td>
+                                <td>{{ row.hectares }}</td>
+                                <td>{{ row.predicted_lkg_tc if row.predicted_lkg_tc is not none else 'Pending' }}</td>
+                                <td>{{ row.predicted_lkg_ha if row.predicted_lkg_ha is not none else 'Pending' }}</td>
+                                <td>{{ row.predicted_lkg if row.predicted_lkg is not none else 'Pending' }}</td>
                                 <td>{{ row.created_at.strftime('%b %d, %Y') }}</td>
                             </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="7">No scan data available for reporting.</td>
+                            <td colspan="7">No prediction data available for reporting.</td>
                         </tr>
                     {% endif %}
                 </tbody>

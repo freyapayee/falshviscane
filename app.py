@@ -69,9 +69,9 @@ TRAINING_CATEGORICAL_FEATURES = ["variety"]
 TRAINING_FEATURE_COLUMNS = TRAINING_CATEGORICAL_FEATURES + TRAINING_NUMERIC_FEATURES
 TRAINING_TARGET_COLUMNS = ["predicted_lkg_tc", "predicted_tc_ha", "predicted_lkg"]
 TRAINING_TARGET_LABELS = {
-    "predicted_lkg_tc": "Predicted LKG/TC",
-    "predicted_tc_ha": "Predicted TC/HA",
-    "predicted_lkg": "Predicted LKG",
+    "predicted_lkg_tc": "Estimated LKG/TC",
+    "predicted_tc_ha": "Estimated TC/HA",
+    "predicted_lkg": "Estimated LKG",
 }
 TRAINING_REQUIRED_COLUMNS = {
     "variety",
@@ -960,7 +960,7 @@ def generate_recommendations(prediction_response, agronomic_input, missing_field
                 {
                     "icon": "trending-up-outline",
                     "title": f"{label} from {_format_factor_value(value)} to at least {int(threshold)}",
-                    "meta": "Low input level is pulling down predicted LKG.",
+                    "meta": "Low input level is pulling down estimated LKG.",
                     "tag": "Improve",
                     "tag_class": "warning",
                     "category": category,
@@ -1155,7 +1155,7 @@ def generate_recommendations(prediction_response, agronomic_input, missing_field
         recommendations.append(
             {
                 "icon": "analytics-outline",
-                "title": "Predicted LKG is below baseline",
+                "title": "Estimated LKG is below baseline",
                 "meta": "Increase low agronomic inputs and re-calculate to recover yield.",
                 "tag": "Attention",
                 "tag_class": "warning",
@@ -1826,20 +1826,18 @@ def admin_farmer_edit(user_id):
 @app.route('/admin/monitoring')
 @login_required
 def admin_monitoring():
-    scans = Scan.query.order_by(Scan.created_at.desc()).limit(50).all()
+    logs = AgronomicLog.query.order_by(AgronomicLog.created_at.desc()).limit(50).all()
     monitoring_rows = []
-    for scan in scans:
-        tch, lkg_tc, trash_pct = estimate_scan_metrics(scan)
-        bags = round(tch * 20, 2)
+    for log in logs:
         monitoring_rows.append({
-            "plot_name": scan.plot_name,
-            "grade": scan.grade,
-            "maturity_pct": scan.maturity_pct,
-            "status": scan.status,
-            "tch": tch,
-            "lkg_tc": lkg_tc,
-            "bags": bags,
-            "created_at": scan.created_at
+            "farmer_name": log.user.fullname if log.user else f"User #{log.user_id}",
+            "variety": log.variety or "N/A",
+            "hectares": log.hectares or "N/A",
+            "predicted_lkg_tc": round(log.predicted_lkg_tc, 2) if log.predicted_lkg_tc is not None else None,
+            "predicted_tc_ha": round(log.predicted_tc_ha, 2) if log.predicted_tc_ha is not None else None,
+            "predicted_lkg": round(log.predicted_lkg, 2) if log.predicted_lkg is not None else None,
+            "rssi_infected": log.rssi_infected or "N/A",
+            "created_at": log.created_at
         })
     return render_template('admin_monitoring.html', rows=monitoring_rows, current_admin=get_current_admin())
 
@@ -1886,21 +1884,26 @@ def admin_models():
 @app.route('/admin/reports')
 @login_required
 def admin_reports():
-    scans = Scan.query.order_by(Scan.created_at.desc()).all()
+    logs = AgronomicLog.query.order_by(AgronomicLog.created_at.desc()).all()
     farmer_summary = {}
-    for scan in scans:
-        tch, lkg_tc, trash_pct = estimate_scan_metrics(scan)
-        entry = farmer_summary.setdefault(scan.user_id, {
+    for log in logs:
+        entry = farmer_summary.setdefault(log.user_id, {
             "count": 0,
-            "total_maturity": 0,
-            "total_tch": 0,
-            "total_lkg_tc": 0,
+            "lkg_tc_count": 0,
+            "tc_ha_count": 0,
+            "total_lkg_tc": 0.0,
+            "total_tc_ha": 0.0,
+            "total_lkg": 0.0,
         })
         entry["count"] += 1
-        entry["total_maturity"] += scan.maturity_pct
-        entry["total_tch"] += tch
-        entry["total_lkg_tc"] += lkg_tc
-        entry["total_trash"] += trash_pct
+        if log.predicted_lkg_tc is not None:
+            entry["lkg_tc_count"] += 1
+            entry["total_lkg_tc"] += float(log.predicted_lkg_tc)
+        if log.predicted_tc_ha is not None:
+            entry["tc_ha_count"] += 1
+            entry["total_tc_ha"] += float(log.predicted_tc_ha)
+        if log.predicted_lkg is not None:
+            entry["total_lkg"] += float(log.predicted_lkg)
 
     rows = []
     for user_id, summary in farmer_summary.items():
@@ -1912,14 +1915,13 @@ def admin_reports():
             "name": user.fullname,
             "municipality": user.municipality or 'N/A',
             "barangay": user.barangay or 'N/A',
-            "scans": count,
-            "avg_maturity": round(summary["total_maturity"] / count, 1) if count else 0,
-            "avg_tch": round(summary["total_tch"] / count, 2) if count else 0,
-            "avg_lkg_tc": round(summary["total_lkg_tc"] / count, 2) if count else 0,
-            "avg_trash": round(summary["total_trash"] / count, 2) if count else 0
+            "predictions": count,
+            "avg_lkg_tc": round(summary["total_lkg_tc"] / summary["lkg_tc_count"], 2) if summary["lkg_tc_count"] else 0,
+            "avg_lkg_ha": round(summary["total_tc_ha"] / summary["tc_ha_count"], 2) if summary["tc_ha_count"] else 0,
+            "total_lkg": round(summary["total_lkg"], 2),
         })
 
-    rows = sorted(rows, key=lambda item: item["scans"], reverse=True)
+    rows = sorted(rows, key=lambda item: item["predictions"], reverse=True)
     return render_template('admin_reports.html', rows=rows, current_admin=get_current_admin())
 
 @app.route('/admin/communications', methods=['GET', 'POST'])
@@ -2107,6 +2109,7 @@ def superadmin_portal():
         Scan.user_id.in_(active_user_ids)
     ).distinct().count()
     total_scans = Scan.query.count()
+    total_prediction_logs = AgronomicLog.query.count()
     pending_scans = Scan.query.filter(
         Scan.status == 'pending',
         Scan.user_id.in_(active_user_ids)
@@ -2116,6 +2119,7 @@ def superadmin_portal():
     archived_users = User.query.filter_by(is_archived=True).order_by(User.id.desc()).all()
     deactivated_users = User.query.filter_by(is_archived=False, is_active=False).order_by(User.id.desc()).all()
     recent_scans = Scan.query.filter(Scan.user_id.in_(active_user_ids)).order_by(Scan.created_at.desc()).limit(6).all()
+    recent_predictions = AgronomicLog.query.order_by(AgronomicLog.created_at.desc()).limit(6).all()
     return render_template(
         'superadmin.html',
         total_users=total_users,
@@ -2125,12 +2129,14 @@ def superadmin_portal():
         total_admins=total_admins,
         active_farmers=active_farmers,
         total_scans=total_scans,
+        total_prediction_logs=total_prediction_logs,
         pending_scans=pending_scans,
         admins=admins,
         users=users,
         archived_users=archived_users,
         deactivated_users=deactivated_users,
         recent_scans=recent_scans,
+        recent_predictions=recent_predictions,
         create_error=create_error,
         create_success=create_success,
         current_admin=get_current_admin()
@@ -2238,7 +2244,7 @@ def superadmin_user_details(user_id):
         activity_items.append({
             'kind': 'Agronomic Log',
             'title': log.variety or 'Agronomic entry',
-            'meta': f"Hectares {log.hectares or 'N/A'} | Predicted LKG {round(log.predicted_lkg, 2) if log.predicted_lkg is not None else 'N/A'}",
+            'meta': f"Hectares {log.hectares or 'N/A'} | Estimated LKG {round(log.predicted_lkg, 2) if log.predicted_lkg is not None else 'N/A'}",
             'timestamp': log.created_at,
         })
     for entry in feedback_entries:
@@ -2413,34 +2419,42 @@ def superadmin_settings():
 @app.route('/superadmin/reports')
 @role_required('superadmin')
 def superadmin_reports():
-    scans = Scan.query.order_by(Scan.created_at.desc()).all()
-    total_scans = len(scans)
+    logs = AgronomicLog.query.order_by(AgronomicLog.created_at.desc()).all()
+    total_predictions = len(logs)
     rows = []
-    total_tch = 0
-    total_lkg_tc = 0
-    total_trash = 0
-    for scan in scans:
-        tch, lkg_tc, trash_pct = estimate_scan_metrics(scan)
-        total_tch += tch
-        total_lkg_tc += lkg_tc
-        total_trash += trash_pct
+    total_lkg_tc = 0.0
+    total_tc_ha = 0.0
+    total_lkg = 0.0
+    lkg_tc_count = 0
+    tc_ha_count = 0
+    for log in logs:
+        if log.predicted_lkg_tc is not None:
+            total_lkg_tc += float(log.predicted_lkg_tc)
+            lkg_tc_count += 1
+        if log.predicted_tc_ha is not None:
+            total_tc_ha += float(log.predicted_tc_ha)
+            tc_ha_count += 1
+        if log.predicted_lkg is not None:
+            total_lkg += float(log.predicted_lkg)
         rows.append({
-            "plot_name": scan.plot_name,
-            "grade": scan.grade,
-            "maturity_pct": scan.maturity_pct,
-            "tch": tch,
-            "lkg_tc": lkg_tc,
-            "created_at": scan.created_at
+            "farmer_name": log.user.fullname if log.user else f"User #{log.user_id}",
+            "variety": log.variety or "N/A",
+            "hectares": log.hectares or "N/A",
+            "predicted_lkg_tc": round(log.predicted_lkg_tc, 2) if log.predicted_lkg_tc is not None else None,
+            "predicted_lkg_ha": round(log.predicted_tc_ha, 2) if log.predicted_tc_ha is not None else None,
+            "predicted_lkg": round(log.predicted_lkg, 2) if log.predicted_lkg is not None else None,
+            "created_at": log.created_at
         })
 
-    avg_lkg_tc = round(total_lkg_tc / total_scans, 2) if total_scans else 0
-    avg_trash_pct = round(total_trash / total_scans, 2) if total_scans else 0
-    total_predicted_yield = round(total_tch, 2) if total_scans else 0
+    avg_lkg_tc = round(total_lkg_tc / lkg_tc_count, 2) if lkg_tc_count else 0
+    avg_lkg_ha = round(total_tc_ha / tc_ha_count, 2) if tc_ha_count else 0
+    total_estimated_lkg = round(total_lkg, 2) if total_predictions else 0
 
     report = {
         "avg_lkg_tc": avg_lkg_tc,
-        "total_predicted_yield": total_predicted_yield,
-        "total_scans": total_scans
+        "avg_lkg_ha": avg_lkg_ha,
+        "total_estimated_lkg": total_estimated_lkg,
+        "total_predictions": total_predictions,
     }
 
     return render_template(
@@ -2453,29 +2467,32 @@ def superadmin_reports():
 @app.route('/superadmin/reports/download')
 @role_required('superadmin')
 def superadmin_reports_download():
-    scans = Scan.query.order_by(Scan.created_at.desc()).all()
+    logs = AgronomicLog.query.order_by(AgronomicLog.created_at.desc()).all()
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow([
-        "Scan ID",
-        "Plot Name",
-        "Grade",
-        "Maturity %",
-        "Estimated TCH",
+        "Prediction ID",
+        "Farmer Name",
+        "Variety",
+        "Hectares",
         "Estimated LKG/TC",
+        "Estimated LKG/HA",
+        "Estimated Total LKG",
+        "RSSI Infected",
         "Created At"
     ])
-    for scan in scans:
-        tch, lkg_tc, trash_pct = estimate_scan_metrics(scan)
+    for log in logs:
+        farmer_name = log.user.fullname if log.user else f"User #{log.user_id}"
         writer.writerow([
-            scan.id,
-            scan.plot_name,
-            scan.grade,
-            scan.maturity_pct,
-            tch,
-            lkg_tc,
-            trash_pct,
-            scan.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            log.id,
+            farmer_name,
+            log.variety or "",
+            log.hectares or "",
+            round(log.predicted_lkg_tc, 2) if log.predicted_lkg_tc is not None else "",
+            round(log.predicted_tc_ha, 2) if log.predicted_tc_ha is not None else "",
+            round(log.predicted_lkg, 2) if log.predicted_lkg is not None else "",
+            log.rssi_infected or "",
+            log.created_at.strftime('%Y-%m-%d %H:%M:%S')
         ])
 
     response = Response(output.getvalue(), mimetype='text/csv')
