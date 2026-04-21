@@ -6,6 +6,12 @@ services:
       POSTGRES_USER: ${LOCAL_POSTGRES_USER:-user}
       POSTGRES_PASSWORD: ${LOCAL_POSTGRES_PASSWORD:-password}
       POSTGRES_DB: ${LOCAL_POSTGRES_DB:-viscane_db}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LOCAL_POSTGRES_USER:-user} -d ${LOCAL_POSTGRES_DB:-viscane_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     ports:
       - "${LOCAL_POSTGRES_PORT:-5433}:5432"
     volumes:
@@ -13,13 +19,16 @@ services:
 
   app:
     build: .
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "${APP_PORT:-5000}:5000"
     env_file:
       - .env.example
     environment:
-      VISCANE_SECRET_KEY: ${VISCANE_SECRET_KEY:-change-this-key}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://user:password@db:5432/viscane_db}
+      VISCANE_SECRET_KEY: ${VISCANE_SECRET_KEY:-viscane_2026_f13_w05_j28}
+      DATABASE_URL: postgresql://${LOCAL_POSTGRES_USER:-user}:${LOCAL_POSTGRES_PASSWORD:-password}@db:5432/${LOCAL_POSTGRES_DB:-viscane_db}
 
 volumes:
   postgres_data:

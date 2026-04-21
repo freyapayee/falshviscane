@@ -69,9 +69,9 @@ TRAINING_CATEGORICAL_FEATURES = ["variety"]
 TRAINING_FEATURE_COLUMNS = TRAINING_CATEGORICAL_FEATURES + TRAINING_NUMERIC_FEATURES
 TRAINING_TARGET_COLUMNS = ["predicted_lkg_tc", "predicted_tc_ha", "predicted_lkg"]
 TRAINING_TARGET_LABELS = {
-    "predicted_lkg_tc": "Estimated LKG/TC",
-    "predicted_tc_ha": "Estimated TC/HA",
-    "predicted_lkg": "Estimated LKG",
+    "predicted_lkg_tc": "Predicted LKG/TC",
+    "predicted_tc_ha": "Predicted TC/HA",
+    "predicted_lkg": "Predicted LKG",
 }
 TRAINING_REQUIRED_COLUMNS = {
     "variety",
@@ -960,7 +960,7 @@ def generate_recommendations(prediction_response, agronomic_input, missing_field
                 {
                     "icon": "trending-up-outline",
                     "title": f"{label} from {_format_factor_value(value)} to at least {int(threshold)}",
-                    "meta": "Low input level is pulling down estimated LKG.",
+                    "meta": "Low input level is pulling down predicted LKG.",
                     "tag": "Improve",
                     "tag_class": "warning",
                     "category": category,
@@ -1155,7 +1155,7 @@ def generate_recommendations(prediction_response, agronomic_input, missing_field
         recommendations.append(
             {
                 "icon": "analytics-outline",
-                "title": "Estimated LKG is below baseline",
+                "title": "Predicted LKG is below baseline",
                 "meta": "Increase low agronomic inputs and re-calculate to recover yield.",
                 "tag": "Attention",
                 "tag_class": "warning",
@@ -2244,7 +2244,7 @@ def superadmin_user_details(user_id):
         activity_items.append({
             'kind': 'Agronomic Log',
             'title': log.variety or 'Agronomic entry',
-            'meta': f"Hectares {log.hectares or 'N/A'} | Estimated LKG {round(log.predicted_lkg, 2) if log.predicted_lkg is not None else 'N/A'}",
+            'meta': f"Hectares {log.hectares or 'N/A'} | Predicted LKG {round(log.predicted_lkg, 2) if log.predicted_lkg is not None else 'N/A'}",
             'timestamp': log.created_at,
         })
     for entry in feedback_entries:
@@ -2448,12 +2448,12 @@ def superadmin_reports():
 
     avg_lkg_tc = round(total_lkg_tc / lkg_tc_count, 2) if lkg_tc_count else 0
     avg_lkg_ha = round(total_tc_ha / tc_ha_count, 2) if tc_ha_count else 0
-    total_estimated_lkg = round(total_lkg, 2) if total_predictions else 0
+    total_predicted_lkg = round(total_lkg, 2) if total_predictions else 0
 
     report = {
         "avg_lkg_tc": avg_lkg_tc,
         "avg_lkg_ha": avg_lkg_ha,
-        "total_estimated_lkg": total_estimated_lkg,
+        "total_predicted_lkg": total_predicted_lkg,
         "total_predictions": total_predictions,
     }
 
@@ -2475,9 +2475,9 @@ def superadmin_reports_download():
         "Farmer Name",
         "Variety",
         "Hectares",
-        "Estimated LKG/TC",
-        "Estimated LKG/HA",
-        "Estimated Total LKG",
+        "Predicted LKG/TC",
+        "Predicted LKG/HA",
+        "Predicted Total LKG",
         "RSSI Infected",
         "Created At"
     ])
