@@ -16,7 +16,7 @@ services:
     ports:
       - "${APP_PORT:-5000}:5000"
     env_file:
-      - .env
+      - .env.example
     environment:
       VISCANE_SECRET_KEY: ${VISCANE_SECRET_KEY:-change-this-key}
       DATABASE_URL: ${DATABASE_URL:-postgresql://user:password@db:5432/viscane_db}
