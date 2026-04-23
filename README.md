@@ -19,10 +19,10 @@ Examples of where to host it:
 
 ## 1. Create the team env file
 
-Copy `.env.example` to `.env` and set the shared database URL:
+Create `.env.local` and set the shared database URL:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
 Update:
@@ -32,7 +32,7 @@ DATABASE_URL=postgresql://shared_user:shared_password@your-db-host:5432/viscane_
 VISCANE_SECRET_KEY=replace-with-a-strong-secret-key
 ```
 
-Keep `.env` out of Git. Only commit `.env.example`.
+Keep `.env.local` out of Git. Only commit `.env.example`.
 
 ## 2. Run the Flask app locally against the shared DB
 
@@ -48,11 +48,11 @@ Start the app:
 .env/bin/python app.py
 ```
 
-The app will use `DATABASE_URL` from `.env`.
+The app will use `DATABASE_URL` from `.env.local` when set.
 
 ## Optional: Run with Docker
 
-If your `.env` contains a hosted `DATABASE_URL`, the app container will use that value:
+If your `.env.local` contains a hosted `DATABASE_URL`, the app container will use that value:
 
 ```bash
 docker compose up --build app
@@ -60,7 +60,7 @@ docker compose up --build app
 
 ## Optional: Local database fallback
 
-If you do not want to use the shared database while developing, remove `DATABASE_URL` from `.env` and run:
+If you do not want to use the shared database while developing, remove `DATABASE_URL` from `.env.local` and run:
 
 ```bash
 docker compose up -d db
@@ -71,7 +71,7 @@ The app will then fall back to the local Docker PostgreSQL instance on `localhos
 ## Team workflow
 
 - Everyone pulls the same code from GitHub
-- Everyone creates their own `.env`
+- Everyone creates their own `.env.local`
 - Everyone uses the same hosted `DATABASE_URL`
 - The database data is shared because the host is shared, not because `localhost` is shared
 

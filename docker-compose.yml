@@ -25,10 +25,13 @@ services:
     ports:
       - "${APP_PORT:-5000}:5000"
     env_file:
-      - .env.example
+      - path: .env.example
+        required: true
+      - path: .env.local
+        required: false
     environment:
       VISCANE_SECRET_KEY: ${VISCANE_SECRET_KEY:-viscane_2026_f13_w05_j28}
-      DATABASE_URL: postgresql://${LOCAL_POSTGRES_USER:-user}:${LOCAL_POSTGRES_PASSWORD:-password}@db:5432/${LOCAL_POSTGRES_DB:-viscane_db}
+      DATABASE_FALLBACK_URL: postgresql://${LOCAL_POSTGRES_USER:-user}:${LOCAL_POSTGRES_PASSWORD:-password}@db:5432/${LOCAL_POSTGRES_DB:-viscane_db}
 
 volumes:
   postgres_data:

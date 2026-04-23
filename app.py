@@ -21,6 +21,32 @@ from werkzeug.utils import secure_filename
 
 from models import db, User, Admin, Scan, AuditLog, SystemConfig, Notification, Feedback, AgronomicLog
 
+
+def load_env_file(path):
+    """Load KEY=VALUE pairs from an env file without overriding existing os.environ values."""
+    if not os.path.isfile(path):
+        return
+    try:
+        with open(path, "r", encoding="utf-8") as env_file:
+            for raw_line in env_file:
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                if not key:
+                    continue
+                value = value.strip()
+                if value and len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+                    value = value[1:-1]
+                os.environ.setdefault(key, value)
+    except OSError:
+        pass
+
+
+for env_path in (".env.example", ".env.local", ".env"):
+    load_env_file(env_path)
+
 DEFAULT_VARIETY_WEIGHTS = {
     "VMC 84-524": {
         "rssi": -0.45,
@@ -182,6 +208,7 @@ app.config['SECRET_KEY'] = os.getenv('VISCANE_SECRET_KEY', 'change-this-key')
 database_url = (
     os.getenv('SQLALCHEMY_DATABASE_URI')
     or os.getenv('DATABASE_URL')
+    or os.getenv('DATABASE_FALLBACK_URL')
     or 'postgresql://user:password@localhost:5433/viscane_db'
 )
 if database_url.startswith('postgres://'):
