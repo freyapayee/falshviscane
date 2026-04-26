@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VISCANE | Recommendations</title>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="farmer-layout">
+    <div class="dashboard-bg"></div>
+
+    <header class="dashboard-header">
+        <div class="header-content">
+            <div class="brand">
+                <div class="brand-icon">
+                    <img src="{{ url_for('static', filename='logo.jpg') }}" alt="VISCANE Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                </div>
+                <div>
+                    <p class="brand-title">Recommendations</p>
+                    <p class="brand-subtitle">Next best actions for {{ user.fullname }}</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a class="btn light" href="/homepage">
+                    <ion-icon name="home-outline"></ion-icon>
+                    Home
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-container fade-in farmer-mobile-shell">
+        <section class="panel">
+            <div class="panel-header">
+                <div>
+                    <h3 class="panel-title">Action Recommendations</h3>
+                    <p class="panel-subtitle">Generated from your latest agronomic inputs</p>
+                </div>
+                <span class="badge"><ion-icon name="checkmark-circle-outline"></ion-icon>{{ recommendations|length }} task{% if recommendations|length != 1 %}s{% endif %}</span>
+            </div>
+            {% if grouped_recommendations %}
+                {% for group in grouped_recommendations %}
+                    <div class="list-meta" style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 6px;">
+                        {{ group.category }}
+                    </div>
+                    {% for rec in group["items"] %}
+                        <div class="list-row">
+                            <div class="list-badge"><ion-icon name="{{ rec.icon }}"></ion-icon></div>
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0;">{{ rec.title }}</h4>
+                                <div class="list-meta">{{ rec.meta }}</div>
+                            </div>
+                            <span class="tag{% if rec.tag_class %} {{ rec.tag_class }}{% endif %}">{{ rec.tag }}</span>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            {% else %}
+                <div class="list-meta">No recommendations yet. Run a calculation from Home.</div>
+            {% endif %}
+        </section>
+
+        <div class="footer-link">VISCANE Farmer Portal | Recommendations</div>
+    </main>
+
+    <nav class="farmer-bottom-nav" aria-label="Farmer navigation">
+        <a class="farmer-bottom-link" href="/homepage">
+            <ion-icon name="home-outline"></ion-icon>
+            <span>Home</span>
+        </a>
+        <a class="farmer-bottom-link is-active" href="/farmer/recommendations">
+            <ion-icon name="sparkles-outline"></ion-icon>
+            <span>Recommendations</span>
+        </a>
+        <a class="farmer-bottom-link" href="/farmer/agronomic-logs">
+            <ion-icon name="document-text-outline"></ion-icon>
+            <span>Agronomic Input Logs</span>
+        </a>
+        <a class="farmer-bottom-link" href="/farmer/settings">
+            <ion-icon name="person-outline"></ion-icon>
+            <span>Profile</span>
+        </a>
+    </nav>
+</body>
+</html>

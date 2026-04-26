@@ -26,15 +26,11 @@
                     <ion-icon name="grid-outline"></ion-icon>
                     Dashboard
                 </a>
-                <a class="btn light" href="/logout">
-                    <ion-icon name="log-out-outline"></ion-icon>
-                    Sign Out
-                </a>
             </div>
         </div>
     </header>
 
-    <main class="dashboard-container fade-in">
+    <main class="dashboard-container fade-in farmer-mobile-shell">
         {% if success %}
             <div class="form-success">{{ success }}</div>
         {% endif %}
@@ -56,18 +52,97 @@
                     </button>
                 </div>
 
-                <div class="stat-label">Full Name</div>
-                <input class="stat-input" type="text" value="{{ user.fullname }}" readonly>
-                <div class="stat-label">Email Address</div>
-                <input class="stat-input" type="email" name="email" value="{{ user.email }}" required>
-                <div class="stat-label">Phone Number</div>
-                <input class="stat-input" type="tel" name="phone" value="{{ user.phone }}" inputmode="numeric" minlength="11" maxlength="11" pattern="[0-9]{11}" title="Phone number must be exactly 11 digits" required>
-                <div class="stat-label">Province</div>
-                <input class="stat-input" type="text" value="{{ user.province or 'Not provided' }}" readonly>
-                <div class="stat-label">Municipality</div>
-                <input class="stat-input" type="text" value="{{ user.municipality or 'Not provided' }}" readonly>
-                <div class="stat-label">Barangay</div>
-                <input class="stat-input" type="text" value="{{ user.barangay or 'Not provided' }}" readonly>
+                <div class="profile-details-modern">
+                    <label class="profile-detail-row">
+                        <span class="profile-detail-icon"><ion-icon name="person-outline"></ion-icon></span>
+                        <span class="profile-detail-copy">
+                            <span class="profile-detail-label">Full Name</span>
+                            <input class="profile-detail-input is-readonly" type="text" value="{{ user.fullname }}" readonly>
+                        </span>
+                    </label>
+
+                    <label class="profile-detail-row">
+                        <span class="profile-detail-icon"><ion-icon name="mail-outline"></ion-icon></span>
+                        <span class="profile-detail-copy">
+                            <span class="profile-detail-label">Email Address</span>
+                            <input class="profile-detail-input" type="email" name="email" value="{{ user.email }}" required>
+                        </span>
+                    </label>
+
+                    <label class="profile-detail-row">
+                        <span class="profile-detail-icon"><ion-icon name="call-outline"></ion-icon></span>
+                        <span class="profile-detail-copy">
+                            <span class="profile-detail-label">Phone Number</span>
+                            <input class="profile-detail-input" type="tel" name="phone" value="{{ user.phone }}" inputmode="numeric" minlength="11" maxlength="11" pattern="[0-9]{11}" title="Phone number must be exactly 11 digits" required>
+                        </span>
+                    </label>
+
+                    <div class="profile-detail-divider">
+                        <span>Location Details</span>
+                    </div>
+
+                    <label class="profile-detail-row">
+                        <span class="profile-detail-icon"><ion-icon name="map-outline"></ion-icon></span>
+                        <span class="profile-detail-copy">
+                            <span class="profile-detail-label">Province</span>
+                            <select class="profile-detail-input profile-detail-select" name="province" required>
+                                <option value="" disabled {% if not user.province %}selected{% endif %}>Select Province</option>
+                                <option value="Negros Occidental" {% if user.province == 'Negros Occidental' %}selected{% endif %}>Negros Occidental</option>
+                            </select>
+                        </span>
+                    </label>
+
+                    <label class="profile-detail-row">
+                        <span class="profile-detail-icon"><ion-icon name="business-outline"></ion-icon></span>
+                        <span class="profile-detail-copy">
+                            <span class="profile-detail-label">Municipality</span>
+                            <select class="profile-detail-input profile-detail-select" name="municipality" required>
+                                <option value="" disabled {% if not user.municipality %}selected{% endif %}>Select Municipality</option>
+                                <option value="Isabela" {% if user.municipality == 'Isabela' %}selected{% endif %}>Isabela</option>
+                            </select>
+                        </span>
+                    </label>
+
+                    <label class="profile-detail-row">
+                        <span class="profile-detail-icon"><ion-icon name="pin-outline"></ion-icon></span>
+                        <span class="profile-detail-copy">
+                            <span class="profile-detail-label">Barangay</span>
+                            <select class="profile-detail-input profile-detail-select" name="barangay" required>
+                                <option value="" disabled {% if not user.barangay %}selected{% endif %}>Select Barangay</option>
+                                <option value="Amin" {% if user.barangay == 'Amin' %}selected{% endif %}>Amin</option>
+                                <option value="Banogbanog" {% if user.barangay == 'Banogbanog' %}selected{% endif %}>Banogbanog</option>
+                                <option value="Bulad" {% if user.barangay == 'Bulad' %}selected{% endif %}>Bulad</option>
+                                <option value="Bungahin" {% if user.barangay == 'Bungahin' %}selected{% endif %}>Bungahin</option>
+                                <option value="Cabcab" {% if user.barangay == 'Cabcab' %}selected{% endif %}>Cabcab</option>
+                                <option value="Camangcamang" {% if user.barangay == 'Camangcamang' %}selected{% endif %}>Camangcamang</option>
+                                <option value="Camp Clark" {% if user.barangay == 'Camp Clark' %}selected{% endif %}>Camp Clark</option>
+                                <option value="Cansalongon" {% if user.barangay == 'Cansalongon' %}selected{% endif %}>Cansalongon</option>
+                                <option value="Guintubhan" {% if user.barangay == 'Guintubhan' %}selected{% endif %}>Guintubhan</option>
+                                <option value="Libas" {% if user.barangay == 'Libas' %}selected{% endif %}>Libas</option>
+                                <option value="Limalima" {% if user.barangay == 'Limalima' %}selected{% endif %}>Limalima</option>
+                                <option value="Makilignit" {% if user.barangay == 'Makilignit' %}selected{% endif %}>Makilignit</option>
+                                <option value="Mansablay" {% if user.barangay == 'Mansablay' %}selected{% endif %}>Mansablay</option>
+                                <option value="Maytubig" {% if user.barangay == 'Maytubig' %}selected{% endif %}>Maytubig</option>
+                                <option value="Panaquiao" {% if user.barangay == 'Panaquiao' %}selected{% endif %}>Panaquiao</option>
+                                <option value="Barangay 1 (Poblacion)" {% if user.barangay == 'Barangay 1 (Poblacion)' %}selected{% endif %}>Barangay 1 (Poblacion)</option>
+                                <option value="Barangay 2 (Poblacion)" {% if user.barangay == 'Barangay 2 (Poblacion)' %}selected{% endif %}>Barangay 2 (Poblacion)</option>
+                                <option value="Barangay 3 (Poblacion)" {% if user.barangay == 'Barangay 3 (Poblacion)' %}selected{% endif %}>Barangay 3 (Poblacion)</option>
+                                <option value="Barangay 4 (Poblacion)" {% if user.barangay == 'Barangay 4 (Poblacion)' %}selected{% endif %}>Barangay 4 (Poblacion)</option>
+                                <option value="Barangay 5 (Poblacion)" {% if user.barangay == 'Barangay 5 (Poblacion)' %}selected{% endif %}>Barangay 5 (Poblacion)</option>
+                                <option value="Barangay 6 (Poblacion)" {% if user.barangay == 'Barangay 6 (Poblacion)' %}selected{% endif %}>Barangay 6 (Poblacion)</option>
+                                <option value="Barangay 7 (Poblacion)" {% if user.barangay == 'Barangay 7 (Poblacion)' %}selected{% endif %}>Barangay 7 (Poblacion)</option>
+                                <option value="Barangay 8 (Poblacion)" {% if user.barangay == 'Barangay 8 (Poblacion)' %}selected{% endif %}>Barangay 8 (Poblacion)</option>
+                                <option value="Barangay 9 (Poblacion)" {% if user.barangay == 'Barangay 9 (Poblacion)' %}selected{% endif %}>Barangay 9 (Poblacion)</option>
+                                <option value="Riverside" {% if user.barangay == 'Riverside' %}selected{% endif %}>Riverside</option>
+                                <option value="Rumirang" {% if user.barangay == 'Rumirang' %}selected{% endif %}>Rumirang</option>
+                                <option value="San Agustin" {% if user.barangay == 'San Agustin' %}selected{% endif %}>San Agustin</option>
+                                <option value="Sebucawan" {% if user.barangay == 'Sebucawan' %}selected{% endif %}>Sebucawan</option>
+                                <option value="Sikatuna" {% if user.barangay == 'Sikatuna' %}selected{% endif %}>Sikatuna</option>
+                                <option value="Tinongan" {% if user.barangay == 'Tinongan' %}selected{% endif %}>Tinongan</option>
+                            </select>
+                        </span>
+                    </label>
+                </div>
             </form>
 
             <form class="panel" method="POST">
@@ -92,7 +167,41 @@
             </form>
         </section>
 
+        <section class="panel">
+            <div class="panel-header">
+                <div>
+                    <h3 class="panel-title">Account</h3>
+                    <p class="panel-subtitle">Manage your active session</p>
+                </div>
+            </div>
+            <div class="action-grid">
+                <a class="action-tile" href="/logout">
+                    <ion-icon name="log-out-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
+                    <div>Sign Out</div>
+                </a>
+            </div>
+        </section>
+
         <div class="footer-link">VISCANE Farmer Portal | Account Settings</div>
     </main>
+
+    <nav class="farmer-bottom-nav" aria-label="Farmer navigation">
+        <a class="farmer-bottom-link" href="/homepage">
+            <ion-icon name="home-outline"></ion-icon>
+            <span>Home</span>
+        </a>
+        <a class="farmer-bottom-link" href="/farmer/recommendations">
+            <ion-icon name="sparkles-outline"></ion-icon>
+            <span>Recommendations</span>
+        </a>
+        <a class="farmer-bottom-link" href="/farmer/agronomic-logs">
+            <ion-icon name="document-text-outline"></ion-icon>
+            <span>Agronomic Input Logs</span>
+        </a>
+        <a class="farmer-bottom-link is-active" href="/farmer/settings">
+            <ion-icon name="person-outline"></ion-icon>
+            <span>Profile</span>
+        </a>
+    </nav>
 </body>
 </html>

@@ -596,15 +596,11 @@
                     <ion-icon name="person-circle-outline"></ion-icon>
                     Settings
                 </a>
-                <a class="btn light" href="/logout">
-                    <ion-icon name="log-out-outline"></ion-icon>
-                    Sign Out
-                </a>
             </div>
         </div>
     </header>
 
-    <main class="dashboard-container fade-in">
+    <main class="dashboard-container fade-in farmer-mobile-shell">
         {% if message %}
             <div class="form-success">{{ message }}</div>
         {% endif %}
@@ -800,30 +796,27 @@
             <div class="panel">
                 <div class="panel-header">
                     <div>
-                        <h3 class="panel-title">Recommendations</h3>
-                        <p class="panel-subtitle">Next best actions</p>
+                        <h3 class="panel-title">Farmer Pages</h3>
+                        <p class="panel-subtitle">Open recommendations and agronomic logs</p>
                     </div>
-                    <span class="badge"><ion-icon name="checkmark-circle-outline"></ion-icon>{{ recommendations|length }} task{% if recommendations|length != 1 %}s{% endif %}</span>
+                    <span class="badge"><ion-icon name="compass-outline"></ion-icon>Quick Access</span>
                 </div>
-                {% if grouped_recommendations %}
-                    {% for group in grouped_recommendations %}
-                        <div class="list-meta" style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 6px;">
-                            {{ group.category }}
-                        </div>
-                        {% for rec in group["items"] %}
-                            <div class="list-row">
-                                <div class="list-badge"><ion-icon name="{{ rec.icon }}"></ion-icon></div>
-                                <div style="flex: 1;">
-                                    <h4 style="margin: 0;">{{ rec.title }}</h4>
-                                    <div class="list-meta">{{ rec.meta }}</div>
-                                </div>
-                                <span class="tag{% if rec.tag_class %} {{ rec.tag_class }}{% endif %}">{{ rec.tag }}</span>
-                            </div>
-                        {% endfor %}
-                    {% endfor %}
-                {% else %}
-                    <div class="list-meta">No recommendations yet. Run a calculation first.</div>
-                {% endif %}
+                <div class="icon-link-grid">
+                    <a class="icon-link-card" href="/farmer/recommendations">
+                        <span class="icon-link-badge"><ion-icon name="sparkles-outline"></ion-icon></span>
+                        <span class="icon-link-copy">
+                            <strong>Recommendations</strong>
+                            <span>{{ recommendations|length }} item{% if recommendations|length != 1 %}s{% endif %}</span>
+                        </span>
+                    </a>
+                    <a class="icon-link-card" href="/farmer/agronomic-logs">
+                        <span class="icon-link-badge"><ion-icon name="document-text-outline"></ion-icon></span>
+                        <span class="icon-link-copy">
+                            <strong>Agronomic Input Logs</strong>
+                            <span>{{ agronomic_logs|length }} log{% if agronomic_logs|length != 1 %}s{% endif %}</span>
+                        </span>
+                    </a>
+                </div>
             </div>
 
             <div class="panel">
@@ -895,48 +888,19 @@
                 </div>
                 <div class="action-grid">
                     <a class="action-tile" href="/farmer/settings">
-                        <ion-icon name="images-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
+                        <ion-icon name="person-circle-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
                         <div>Profile Settings</div>
                     </a>
-                    <div class="action-tile">
-                        <ion-icon name="time-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
-                        <div>Scan History</div>
-                    </div>
+                    <a class="action-tile" href="/farmer/recommendations">
+                        <ion-icon name="sparkles-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
+                        <div>Recommendations</div>
+                    </a>
+                    <a class="action-tile" href="/farmer/agronomic-logs">
+                        <ion-icon name="document-text-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
+                        <div>Agronomic Input Logs</div>
+                    </a>
                 </div>
             </div>
-        </section>
-
-        <section class="panel">
-            <div class="panel-header">
-                <div>
-                    <h3 class="panel-title">Agronomic Input Logs</h3>
-                    <p class="panel-subtitle">Your previous inputs and system recommendations</p>
-                </div>
-                <span class="badge"><ion-icon name="time-outline"></ion-icon>{{ agronomic_logs|length }} log{% if agronomic_logs|length != 1 %}s{% endif %}</span>
-            </div>
-            {% if agronomic_logs %}
-                {% for log in agronomic_logs %}
-                    <div class="list-row" style="align-items: flex-start;">
-                        <div class="list-badge"><ion-icon name="document-text-outline"></ion-icon></div>
-                        <div style="flex: 1;">
-                            <h4 style="margin: 0;">
-                                {{ log.variety or 'Unknown Variety' }} | {{ log.created_at.strftime('%b %d, %I:%M %p') if log.created_at else 'Date unavailable' }}
-                            </h4>
-                            <div class="list-meta" style="margin-top: 6px;">
-                                Inputs: Plowing {{ log.plowing_count or '-' }}, Weeding {{ log.weeding_count or '-' }}, Fertilizer {{ log.fertilizer_count or '-' }}, Ratoon {{ log.ratoon_stage or '-' }}, RSSI {{ log.rssi_infected or '-' }}, Hectares {{ log.hectares or '-' }}
-                            </div>
-                            <div class="list-meta" style="margin-top: 6px;">
-                                Prediction: LKG/TC {{ '%.2f'|format(log.predicted_lkg_tc) if log.predicted_lkg_tc is not none else 'Pending' }}, TC/HA {{ '%.2f'|format(log.predicted_tc_ha) if log.predicted_tc_ha is not none else 'Pending' }}, LKG {{ '%.2f'|format(log.predicted_lkg) if log.predicted_lkg is not none else 'Pending' }}
-                            </div>
-                            <div class="list-meta" style="margin-top: 6px;">
-                                Recommendations: {{ log.recommendations_summary or 'No recommendation generated.' }}
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div class="list-meta">No agronomic logs yet. Calculate once to save your first log.</div>
-            {% endif %}
         </section>
 
         <section class="panel">
@@ -958,6 +922,26 @@
 
     <div class="footer-link">VISCANE Farmer Portal | AI Assisted Grading</div>
     </main>
+
+    <nav class="farmer-bottom-nav" aria-label="Farmer navigation">
+        <a class="farmer-bottom-link is-active" href="/homepage">
+            <ion-icon name="home-outline"></ion-icon>
+            <span>Home</span>
+        </a>
+        <a class="farmer-bottom-link" href="/farmer/recommendations">
+            <ion-icon name="sparkles-outline"></ion-icon>
+            <span>Recommendations</span>
+        </a>
+        <a class="farmer-bottom-link" href="/farmer/agronomic-logs">
+            <ion-icon name="document-text-outline"></ion-icon>
+            <span>Agronomic Input Logs</span>
+        </a>
+        <a class="farmer-bottom-link" href="/farmer/settings">
+            <ion-icon name="person-outline"></ion-icon>
+            <span>Profile</span>
+        </a>
+    </nav>
+
     <div id="camera-overlay" class="camera-overlay" aria-hidden="true">
         <div class="camera-shell">
             <div class="camera-header">

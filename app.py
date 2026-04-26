@@ -22,8 +22,14 @@ from werkzeug.utils import secure_filename
 from models import db, User, Admin, Scan, AuditLog, SystemConfig, Notification, Feedback, AgronomicLog
 
 
-def load_env_file(path):
-    """Load KEY=VALUE pairs from an env file without overriding existing os.environ values."""
+ORIGINAL_ENV_KEYS = set(os.environ.keys())
+
+
+def load_env_file(path, override=False):
+    """Load KEY=VALUE pairs from an env file.
+
+    Shell-exported env vars always win; local files can optionally override earlier file values.
+    """
     if not os.path.isfile(path):
         return
     try:
@@ -39,13 +45,17 @@ def load_env_file(path):
                 value = value.strip()
                 if value and len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
                     value = value[1:-1]
-                os.environ.setdefault(key, value)
+                if key in ORIGINAL_ENV_KEYS:
+                    continue
+                if override or key not in os.environ:
+                    os.environ[key] = value
     except OSError:
         pass
 
 
-for env_path in (".env.example", ".env.local", ".env"):
-    load_env_file(env_path)
+load_env_file(".env.example", override=False)
+load_env_file(".env.local", override=True)
+load_env_file(".env", override=True)
 
 DEFAULT_VARIETY_WEIGHTS = {
     "VMC 84-524": {
@@ -1317,6 +1327,38 @@ def homepage():
         error=error
     )
 
+@app.route('/farmer/recommendations')
+@farmer_login_required
+def farmer_recommendations():
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth', mode='login'))
+
+    recommendations = session.get('farmer_recommendations') or DEFAULT_RECOMMENDATIONS
+    grouped_recommendations = group_recommendations_by_category(recommendations)
+    return render_template(
+        'farmer_recommendations.html',
+        user=user,
+        recommendations=recommendations,
+        grouped_recommendations=grouped_recommendations,
+    )
+
+@app.route('/farmer/agronomic-logs')
+@farmer_login_required
+def farmer_agronomic_logs():
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth', mode='login'))
+
+    agronomic_logs = AgronomicLog.query.filter_by(user_id=user.id).order_by(AgronomicLog.created_at.desc()).all()
+    return render_template(
+        'farmer_agronomic_logs.html',
+        user=user,
+        agronomic_logs=agronomic_logs,
+    )
+
 @app.route('/calculate', methods=['POST'])
 @farmer_login_required
 def calculate_results():
@@ -1633,9 +1675,12 @@ def farmer_settings():
         if action == 'update_profile':
             email = request.form.get('email', '').strip().lower()
             phone = request.form.get('phone', '').strip()
+            province = request.form.get('province', '').strip()
+            municipality = request.form.get('municipality', '').strip()
+            barangay = request.form.get('barangay', '').strip()
 
-            if not email or not phone:
-                error = 'Please complete your email and phone number.'
+            if not email or not phone or not province or not municipality or not barangay:
+                error = 'Please complete your profile details.'
             elif len(phone) != 11 or not phone.isdigit():
                 error = 'Phone number must be exactly 11 digits.'
             else:
@@ -1645,6 +1690,9 @@ def farmer_settings():
                 else:
                     user.email = email
                     user.phone = phone
+                    user.province = province
+                    user.municipality = municipality
+                    user.barangay = barangay
                     db.session.commit()
                     log_audit(f"Farmer updated profile details: {user.fullname}", user_id=user.id)
                     success = 'Profile updated successfully.'
