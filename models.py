@@ -87,3 +87,17 @@ class AgronomicLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     user = db.relationship('User', backref=db.backref('agronomic_logs', lazy=True, cascade='all, delete-orphan'))
+
+
+class CvScanUpload(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    image_path = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=True)
+    variety = db.Column(db.String(120), nullable=True)
+    maturity_status = db.Column(db.String(40), nullable=True)
+    model_name = db.Column(db.String(120), nullable=True)
+    confidence = db.Column(db.Float, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship('User', backref=db.backref('cv_scan_uploads', lazy=True, cascade='all, delete-orphan'))

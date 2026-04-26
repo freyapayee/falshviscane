@@ -8,6 +8,7 @@ from functools import lru_cache, wraps
 from io import StringIO
 from shutil import disk_usage
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from flask import Flask, render_template, request, redirect, url_for, session, Response
@@ -19,7 +20,7 @@ from sklearn.pipeline import Pipeline
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-from models import db, User, Admin, Scan, AuditLog, SystemConfig, Notification, Feedback, AgronomicLog
+from models import db, User, Admin, Scan, AuditLog, SystemConfig, Notification, Feedback, AgronomicLog, CvScanUpload
 
 
 ORIGINAL_ENV_KEYS = set(os.environ.keys())
@@ -81,6 +82,24 @@ DEFAULT_VARIETY_WEIGHTS = {
     },
 }
 
+CV_MATURITY_BASELINE_WEIGHTS = {
+    "VMC 84-524": {
+        "NOT_MATURE": -0.20,
+        "MATURE": 0.00,
+        "OVER_MATURE": -0.15,
+    },
+    "VMC 84-947": {
+        "NOT_MATURE": -0.18,
+        "MATURE": 0.00,
+        "OVER_MATURE": -0.22,
+    },
+    "MAURITIO RC888": {
+        "NOT_MATURE": -0.22,
+        "MATURE": 0.00,
+        "OVER_MATURE": -0.18,
+    },
+}
+
 SRA_BASELINE_LKG_TC = {
     "VMC 84-524": {1: 2.04, 2: 1.94, 3: 2.40},
     "VMC 84-947": {1: 1.86, 2: 2.14, 3: 2.21},
@@ -128,6 +147,14 @@ LEGACY_TRAIN_HECTARES = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 5.5]
 LEGACY_TRAIN_LEVELS = [1.0, 2.0, 3.0]
 VARIETY_ALIASES = {
     "Mauritius RC888": "MAURITIO RC888",
+    "MAURITIO RC888": "MAURITIO RC888",
+}
+CV_VARIETY_ALIASES = {
+    "524": "VMC 84-524",
+    "VMC 84-524": "VMC 84-524",
+    "847": "VMC 84-947",
+    "VMC 84-947": "VMC 84-947",
+    "MAURITIO": "MAURITIO RC888",
     "MAURITIO RC888": "MAURITIO RC888",
 }
 
@@ -211,6 +238,11 @@ DEFAULT_RECOMMENDATIONS = [
         "category": "General",
     },
 ]
+
+DEFAULT_SCAN_PREDICT_ENDPOINT = "http://34.81.143.245:8000/predict"
+DEFAULT_SCAN_PREDICT_TOP_K = 3
+DEFAULT_SCAN_PREDICT_TIMEOUT_SECONDS = 30
+CV_UPLOAD_RELATIVE_DIR = os.path.join("uploads", "cv_scans")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('VISCANE_SECRET_KEY', 'change-this-key')
@@ -318,6 +350,36 @@ def estimate_scan_metrics(scan):
 def normalize_variety_name(variety):
     cleaned = (variety or "").strip()
     return VARIETY_ALIASES.get(cleaned, cleaned)
+
+def normalize_cv_variety_name(variety):
+    cleaned = (variety or "").strip()
+    if not cleaned:
+        return None
+    cleaned_upper = cleaned.upper()
+    mapped = CV_VARIETY_ALIASES.get(cleaned) or CV_VARIETY_ALIASES.get(cleaned_upper)
+    if mapped:
+        return mapped
+    return normalize_variety_name(cleaned)
+
+def normalize_cv_maturity_status(status):
+    cleaned = (status or "").strip().upper().replace("-", "_").replace(" ", "_")
+    if not cleaned:
+        return None
+    if "OVER" in cleaned and "MATURE" in cleaned:
+        return "OVER_MATURE"
+    if "NOT" in cleaned and "MATURE" in cleaned:
+        return "NOT_MATURE"
+    if "MATURE" in cleaned:
+        return "MATURE"
+    return None
+
+def get_cv_maturity_baseline_adjustment(variety, cv_maturity_status):
+    normalized_variety = normalize_variety_name(variety)
+    normalized_status = normalize_cv_maturity_status(cv_maturity_status)
+    if not normalized_status:
+        return 0.0, None
+    weights = CV_MATURITY_BASELINE_WEIGHTS.get(normalized_variety) or {}
+    return float(weights.get(normalized_status, 0.0)), normalized_status
 
 def get_variety_weights(variety, custom_weights=None):
     weights = deepcopy(DEFAULT_VARIETY_WEIGHTS)
@@ -812,7 +874,113 @@ def compute_agronomic_adjustment(agronomic_input, weights):
 
 def compute_agronomic_penalty(agronomic_input, weights):
     contributions = [float(agronomic_input[key]) * weights[key] for key in AGRONOMIC_KEYS]
-    return sum(value for value in contributions if value < 0)
+    # Equation form: P = sum_k min(0, w_k * x_k)
+    return sum(min(0.0, value) for value in contributions)
+
+def _extract_cv_context(prediction_payload):
+    if not isinstance(prediction_payload, dict):
+        return {}
+
+    models = prediction_payload.get("models")
+    if not isinstance(models, dict) or not models:
+        return {}
+
+    best_entry = None
+    best_confidence = float("-inf")
+    for model_name, model_payload in models.items():
+        if not isinstance(model_payload, dict):
+            continue
+        prediction = model_payload.get("prediction")
+        if not isinstance(prediction, dict):
+            continue
+        confidence_raw = prediction.get("confidence")
+        try:
+            confidence = float(confidence_raw)
+        except (TypeError, ValueError):
+            confidence = float("-inf")
+        if confidence > best_confidence:
+            best_confidence = confidence
+            best_entry = {
+                "model_name": model_name,
+                "prediction": prediction,
+                "top_k": model_payload.get("top_k") or [],
+            }
+
+    if not best_entry:
+        return {}
+
+    prediction = best_entry["prediction"]
+    maturity_status = normalize_cv_maturity_status(prediction.get("maturity_status"))
+    normalized_variety = normalize_cv_variety_name(prediction.get("variety"))
+
+    visual_features = []
+    top_k = best_entry.get("top_k") or []
+    for item in top_k:
+        if not isinstance(item, dict):
+            continue
+        try:
+            conf_value = float(item.get("confidence"))
+        except (TypeError, ValueError):
+            continue
+        visual_features.append(conf_value)
+
+    if not visual_features:
+        try:
+            primary_conf = float(prediction.get("confidence"))
+            visual_features = [primary_conf]
+        except (TypeError, ValueError):
+            visual_features = []
+
+    return {
+        "model_name": best_entry["model_name"],
+        "maturity_status": maturity_status,
+        "class_name": prediction.get("class_name"),
+        "variety": prediction.get("variety"),
+        "normalized_variety": normalized_variety,
+        "confidence": prediction.get("confidence"),
+        "visual_features": visual_features,
+        "models": models,
+    }
+
+
+def _build_cv_upload_path(filename):
+    _, ext = os.path.splitext(filename or "")
+    ext = ext.lower()
+    if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
+        ext = ".jpg"
+    generated_name = f"cv-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(8)}{ext}"
+    relative_path = os.path.join(CV_UPLOAD_RELATIVE_DIR, generated_name)
+    absolute_path = os.path.join(app.static_folder, relative_path)
+    os.makedirs(os.path.dirname(absolute_path), exist_ok=True)
+    return relative_path.replace("\\", "/"), absolute_path
+
+
+def _persist_cv_upload(user_id, uploaded_filename, file_bytes, cv_context):
+    if not user_id or not file_bytes:
+        return
+
+    relative_path, absolute_path = _build_cv_upload_path(uploaded_filename)
+    try:
+        with open(absolute_path, "wb") as image_file:
+            image_file.write(file_bytes)
+    except OSError:
+        return
+
+    try:
+        confidence = _parse_float((cv_context or {}).get("confidence"))
+        entry = CvScanUpload(
+            user_id=user_id,
+            image_path=relative_path,
+            original_filename=secure_filename(uploaded_filename) or "upload.jpg",
+            variety=((cv_context or {}).get("normalized_variety") or (cv_context or {}).get("variety")),
+            maturity_status=(cv_context or {}).get("maturity_status"),
+            model_name=(cv_context or {}).get("model_name"),
+            confidence=confidence,
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 def compute_agronomic_multiplier(agronomic_adjustment):
     return max(0.0, 1.0 + agronomic_adjustment)
@@ -823,7 +991,7 @@ def get_sra_baseline(variety, crop_stage):
     except KeyError as exc:
         raise ValueError("Missing SRA baseline for the selected variety or ratoon stage.") from exc
 
-def predict_variety_metrics(variety, hectares, visual_features, agronomic_input, custom_weights=None):
+def predict_variety_metrics(variety, hectares, visual_features, agronomic_input, custom_weights=None, cv_maturity_status=None):
     normalized_variety = normalize_variety_name(variety)
     if normalized_variety not in DEFAULT_VARIETY_WEIGHTS and custom_weights is None:
         raise ValueError("Unknown variety. Provide a known variety or include custom_weights.")
@@ -839,7 +1007,11 @@ def predict_variety_metrics(variety, hectares, visual_features, agronomic_input,
     # Keep sklearn in use via compute_agronomic_adjustment(), but enforce weighted-baseline prediction output.
     agronomic_adjustment = compute_agronomic_adjustment(agronomic_input, weights_used)
     agronomic_penalty = compute_agronomic_penalty(agronomic_input, weights_used)
-    agronomic_multiplier = compute_agronomic_multiplier(agronomic_penalty)
+    cv_maturity_adjustment, normalized_cv_maturity_status = get_cv_maturity_baseline_adjustment(
+        normalized_variety, cv_maturity_status
+    )
+    combined_penalty = agronomic_penalty + cv_maturity_adjustment
+    agronomic_multiplier = compute_agronomic_multiplier(combined_penalty)
     raw_predicted_lkg_tc = baseline_lkg_tc * agronomic_multiplier
     predicted_lkg_tc = max(0.0, min(baseline_lkg_tc, raw_predicted_lkg_tc))
     raw_predicted_tc_ha = adjusted_baseline_tc_ha * agronomic_multiplier
@@ -848,7 +1020,7 @@ def predict_variety_metrics(variety, hectares, visual_features, agronomic_input,
     prediction_engine = "weighted_baseline_sklearn"
     trained_rows = 0
 
-    predicted_quality_grade = visual_grade + agronomic_adjustment
+    predicted_quality_grade = visual_grade + agronomic_adjustment + cv_maturity_adjustment
 
     return {
         "variety": normalized_variety,
@@ -857,6 +1029,9 @@ def predict_variety_metrics(variety, hectares, visual_features, agronomic_input,
         "visual_grade": visual_grade,
         "agronomic_adjustment": agronomic_adjustment,
         "agronomic_penalty": agronomic_penalty,
+        "cv_maturity_status": normalized_cv_maturity_status,
+        "cv_maturity_adjustment": cv_maturity_adjustment,
+        "combined_penalty": combined_penalty,
         "agronomic_multiplier": agronomic_multiplier,
         "predicted_quality_grade": predicted_quality_grade,
         "baseline_lkg_tc": baseline_lkg_tc,
@@ -874,6 +1049,7 @@ def predict_variety_metrics(variety, hectares, visual_features, agronomic_input,
             "hectares": hectares,
             "visual_features": visual_features,
             "agronomic_input": agronomic_input,
+            "cv_maturity_status": normalized_cv_maturity_status,
         },
     }
 
@@ -1242,6 +1418,41 @@ def group_recommendations_by_category(recommendations):
 
     return ordered_groups
 
+
+def _build_multipart_form_data(fields, files):
+    """Encode multipart/form-data payload for outbound prediction requests."""
+    boundary = f"----ViscaneBoundary{secrets.token_hex(16)}"
+    chunks = []
+
+    for field_name, field_value in (fields or {}).items():
+        chunks.append(f"--{boundary}\r\n".encode("utf-8"))
+        chunks.append(
+            f'Content-Disposition: form-data; name="{field_name}"\r\n\r\n'.encode("utf-8")
+        )
+        chunks.append(str(field_value).encode("utf-8"))
+        chunks.append(b"\r\n")
+
+    for file_item in (files or []):
+        field_name = file_item["field_name"]
+        file_name = file_item["filename"]
+        content_type = file_item["content_type"]
+        file_bytes = file_item["content"]
+        chunks.append(f"--{boundary}\r\n".encode("utf-8"))
+        chunks.append(
+            (
+                f'Content-Disposition: form-data; name="{field_name}"; '
+                f'filename="{file_name}"\r\n'
+            ).encode("utf-8")
+        )
+        chunks.append(f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"))
+        chunks.append(file_bytes)
+        chunks.append(b"\r\n")
+
+    chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
+    body = b"".join(chunks)
+    content_type = f"multipart/form-data; boundary={boundary}"
+    return body, content_type
+
 def verify_and_upgrade_password(user, raw_password):
     try:
         if check_password_hash(user.password, raw_password):
@@ -1268,21 +1479,32 @@ def homepage():
         session.pop('user_id', None)
         return redirect(url_for('auth', mode='login'))
 
-    if not Scan.query.filter_by(user_id=user.id).first():
-        sample_scans = [
-            Scan(user_id=user.id, plot_name='Plot #4 Sample', grade='A', maturity_pct=91, status='ready', created_at=datetime.utcnow() - timedelta(hours=2)),
-            Scan(user_id=user.id, plot_name='Plot #2 Sample', grade='B', maturity_pct=76, status='monitor', created_at=datetime.utcnow() - timedelta(hours=3)),
-            Scan(user_id=user.id, plot_name='Plot #1 Sample', grade='A', maturity_pct=88, status='healthy', created_at=datetime.utcnow() - timedelta(days=1)),
-        ]
-        db.session.add_all(sample_scans)
-        db.session.commit()
-
     today = datetime.utcnow().date()
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    scans_today = Scan.query.filter(Scan.user_id == user.id, Scan.created_at >= datetime(today.year, today.month, today.day)).count()
-    pending_scans = Scan.query.filter(Scan.user_id == user.id, Scan.status == 'pending').count()
-    scans_last7 = Scan.query.filter(Scan.user_id == user.id, Scan.created_at >= seven_days_ago).all()
-    recent_scans = Scan.query.filter_by(user_id=user.id).order_by(Scan.created_at.desc()).limit(3).all()
+    sample_plot_names = ('Plot #1 Sample', 'Plot #2 Sample', 'Plot #4 Sample')
+    scans_base_query = Scan.query.filter(
+        Scan.user_id == user.id,
+        ~Scan.plot_name.in_(sample_plot_names)
+    )
+    scans_today = scans_base_query.filter(
+        Scan.created_at >= datetime(today.year, today.month, today.day)
+    ).count()
+    pending_scans = scans_base_query.filter(Scan.status == 'pending').count()
+    scans_last7 = scans_base_query.filter(Scan.created_at >= seven_days_ago).all()
+    recent_scans = scans_base_query.order_by(Scan.created_at.desc()).limit(3).all()
+    recent_cv_uploads = CvScanUpload.query.filter_by(user_id=user.id).order_by(CvScanUpload.created_at.desc()).limit(12).all()
+    recent_scan_cards = []
+    for index, scan in enumerate(recent_scans):
+        recent_scan_cards.append({
+            "scan": scan,
+            "cv_upload": recent_cv_uploads[index] if index < len(recent_cv_uploads) else None,
+        })
+    if not recent_scan_cards and recent_cv_uploads:
+        for upload in recent_cv_uploads[:3]:
+            recent_scan_cards.append({
+                "scan": None,
+                "cv_upload": upload,
+            })
     agronomic_logs = AgronomicLog.query.filter_by(user_id=user.id).order_by(AgronomicLog.created_at.desc()).limit(10).all()
     announcements = Notification.query.order_by(Notification.created_at.desc()).limit(5).all()
     recommendations = session.get('farmer_recommendations') or DEFAULT_RECOMMENDATIONS
@@ -1319,6 +1541,8 @@ def homepage():
         harvest_window=harvest_window,
         avg_maturity=avg_maturity,
         recent_scans=recent_scans,
+        recent_scan_cards=recent_scan_cards,
+        recent_cv_uploads=recent_cv_uploads,
         agronomic_logs=agronomic_logs,
         announcements=announcements,
         recommendations=recommendations,
@@ -1359,6 +1583,130 @@ def farmer_agronomic_logs():
         agronomic_logs=agronomic_logs,
     )
 
+
+@app.route('/farmer/cv-upload/<int:upload_id>/delete', methods=['POST'])
+@farmer_login_required
+def delete_cv_upload(upload_id):
+    user_id = session.get('user_id')
+    upload = CvScanUpload.query.filter_by(id=upload_id, user_id=user_id).first()
+    if not upload:
+        return redirect(url_for('homepage', error='Picture not found or already removed.'))
+
+    file_path = os.path.join(app.static_folder, upload.image_path or "")
+    try:
+        db.session.delete(upload)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return redirect(url_for('homepage', error='Unable to remove picture right now.'))
+
+    try:
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+    except OSError:
+        pass
+
+    return redirect(url_for('homepage', message='Picture removed from recent scans.'))
+
+
+@app.route('/api/scan/predict', methods=['POST'])
+@farmer_login_required
+def api_scan_predict():
+    uploaded_file = request.files.get('file') or request.files.get('image')
+    if not uploaded_file or not uploaded_file.filename:
+        return {"error": "Missing image file. Use form field `file`."}, 400
+
+    try:
+        top_k_raw = request.args.get(
+            'top_k',
+            str(os.getenv('SCAN_PREDICT_TOP_K', DEFAULT_SCAN_PREDICT_TOP_K))
+        )
+        top_k = max(1, min(10, int(top_k_raw)))
+    except (TypeError, ValueError):
+        return {"error": "Invalid `top_k`. Provide an integer from 1 to 10."}, 400
+
+    endpoint = (
+        os.getenv('SCAN_PREDICT_ENDPOINT', DEFAULT_SCAN_PREDICT_ENDPOINT).strip()
+        or DEFAULT_SCAN_PREDICT_ENDPOINT
+    )
+    timeout_raw = os.getenv('SCAN_PREDICT_TIMEOUT_SECONDS', str(DEFAULT_SCAN_PREDICT_TIMEOUT_SECONDS))
+    try:
+        timeout_seconds = max(5.0, float(timeout_raw))
+    except (TypeError, ValueError):
+        timeout_seconds = float(DEFAULT_SCAN_PREDICT_TIMEOUT_SECONDS)
+
+    file_bytes = uploaded_file.read()
+    if not file_bytes:
+        return {"error": "Uploaded image is empty."}, 400
+
+    separator = '&' if '?' in endpoint else '?'
+    target_url = f"{endpoint}{separator}{urlencode({'top_k': top_k})}"
+    body, content_type = _build_multipart_form_data(
+        fields={},
+        files=[
+            {
+                "field_name": "file",
+                "filename": secure_filename(uploaded_file.filename) or "capture.jpg",
+                "content_type": uploaded_file.mimetype or "image/jpeg",
+                "content": file_bytes,
+            }
+        ],
+    )
+
+    outbound = Request(target_url, data=body, method='POST')
+    outbound.add_header('accept', 'application/json')
+    outbound.add_header('Content-Type', content_type)
+    outbound.add_header('Content-Length', str(len(body)))
+
+    try:
+        with urlopen(outbound, timeout=timeout_seconds) as api_response:
+            response_body = api_response.read()
+            status_code = getattr(api_response, 'status', 200)
+    except HTTPError as exc:
+        details = ""
+        try:
+            details = exc.read().decode('utf-8', errors='replace')
+        except Exception:
+            details = str(exc)
+        return {
+            "error": "Prediction service returned an error.",
+            "status": exc.code,
+            "details": details[:600],
+        }, 502
+    except URLError as exc:
+        return {
+            "error": "Prediction service is unreachable.",
+            "details": str(exc.reason) if getattr(exc, "reason", None) else str(exc),
+        }, 502
+    except TimeoutError:
+        return {
+            "error": "Prediction service timed out.",
+            "details": f"Request exceeded {timeout_seconds:.0f} seconds.",
+        }, 504
+    except Exception as exc:
+        return {
+            "error": "Failed to request prediction service.",
+            "details": str(exc),
+        }, 500
+
+    if 200 <= status_code < 300:
+        try:
+            cv_context = {}
+            decoded_payload = json.loads(response_body.decode("utf-8"))
+            cv_context = _extract_cv_context(decoded_payload)
+            if cv_context:
+                session["latest_cv_context"] = cv_context
+            _persist_cv_upload(
+                user_id=session.get("user_id"),
+                uploaded_filename=uploaded_file.filename,
+                file_bytes=file_bytes,
+                cv_context=cv_context,
+            )
+        except Exception:
+            pass
+
+    return Response(response_body, status=status_code, mimetype='application/json')
+
 @app.route('/calculate', methods=['POST'])
 @farmer_login_required
 def calculate_results():
@@ -1374,11 +1722,28 @@ def calculate_results():
     ratoon_stage = request.form.get('ratoon_stage', '').strip()
     rssi_infected = request.form.get('rssi_infected', '').strip()
     hectares = request.form.get('hectares', '').strip()
+    cv_maturity_status = request.form.get('cv_maturity_status', '').strip()
+    cv_variety_detected = request.form.get('cv_variety_detected', '').strip()
+    cv_prediction_applied = request.form.get('cv_prediction_applied', '').strip() in {'1', 'true', 'True'}
+    cv_context = (session.get("latest_cv_context") or {}) if cv_prediction_applied else {}
+    cv_detected_variety = normalize_cv_variety_name(cv_variety_detected or cv_context.get("normalized_variety") or cv_context.get("variety"))
+    if not cv_maturity_status:
+        cv_maturity_status = (cv_context.get("maturity_status") or "").strip()
 
     latest_scan = Scan.query.filter_by(user_id=user.id).order_by(Scan.created_at.desc()).first()
     maturity_pct = latest_scan.maturity_pct if latest_scan else None
 
     visual_features = [0.21, 0.48, 0.63, 0.74, 0.59]
+    cv_visual_features = cv_context.get("visual_features")
+    if isinstance(cv_visual_features, list):
+        cleaned_features = []
+        for value in cv_visual_features:
+            try:
+                cleaned_features.append(float(value))
+            except (TypeError, ValueError):
+                continue
+        if cleaned_features:
+            visual_features = cleaned_features
     rssi_text = (rssi_infected or '').strip().lower()
     if rssi_text in {'yes', 'y', '1', 'true'}:
         rssi_value = 1.0
@@ -1506,16 +1871,25 @@ def calculate_results():
             "fertilizer": 0.22,
             "ratoon": -0.10,
             "plowing": 0.09
-        }
+        },
+        "cv_maturity_status": cv_maturity_status,
     }
 
     has_complete_payload = (
         bool(variety)
         and hectares_value is not None
-        and len(visual_features) == 5
+        and len(visual_features) >= 1
         and all(isinstance(value, (int, float)) for value in visual_features)
         and all(value is not None for value in payload["agronomic_input"].values())
     )
+
+    if has_complete_payload and cv_detected_variety and normalized_variety and cv_detected_variety != normalized_variety:
+        has_complete_payload = False
+        api_error = (
+            f"Variety mismatch: Computer vision detected {cv_detected_variety}, "
+            f"but agronomic input selected {normalized_variety}. Please select the matching variety."
+        )
+        missing_fields.append("matching variety")
 
     if has_complete_payload:
         try:
@@ -1525,6 +1899,7 @@ def calculate_results():
                 visual_features=payload["visual_features"],
                 agronomic_input=payload["agronomic_input"],
                 custom_weights=payload["custom_weights"],
+                cv_maturity_status=payload["cv_maturity_status"],
             )
         except ValueError as exc:
             api_error = str(exc)
@@ -1599,7 +1974,17 @@ def calculate_results():
         return 'Over Mature'
 
     variety_display = normalized_variety or 'Not provided'
-    maturity_display = maturity_label(maturity_pct)
+    normalized_cv_maturity = normalize_cv_maturity_status(
+        prediction_response.get("cv_maturity_status") or cv_maturity_status
+    )
+    if normalized_cv_maturity == "NOT_MATURE":
+        maturity_display = "Not Mature (Computer Vision)"
+    elif normalized_cv_maturity == "OVER_MATURE":
+        maturity_display = "Over Mature (Computer Vision)"
+    elif normalized_cv_maturity == "MATURE":
+        maturity_display = "Mature (Computer Vision)"
+    else:
+        maturity_display = maturity_label(maturity_pct)
     hectares_display = hectares if hectares else 'Not provided'
     lkg_tc_display = 'Pending'
     predicted_lkg_tc_display = 'Pending'
@@ -1627,6 +2012,10 @@ def calculate_results():
     api_visual_features = prediction_input.get('visual_features') or visual_features
     api_agronomic_input = prediction_input.get('agronomic_input') or payload["agronomic_input"]
     api_hectares = prediction_input.get('hectares', hectares_value)
+    try:
+        cv_confidence_pct = f"{float(cv_context.get('confidence')) * 100:.1f}%"
+    except (TypeError, ValueError, AttributeError):
+        cv_confidence_pct = "Pending"
 
     return render_template(
         'calculate_results.html',
@@ -1646,6 +2035,11 @@ def calculate_results():
         baseline_tc_ha_per_hectare_display=baseline_tc_ha_per_hectare_display,
         adjusted_baseline_tc_ha_display=adjusted_baseline_tc_ha_display,
         predicted_lkg_display=predicted_lkg_display,
+        cv_model_display=(cv_context.get("model_name") if cv_context else None),
+        cv_class_display=(cv_context.get("class_name") if cv_context else None),
+        cv_variety_display=(cv_detected_variety if cv_detected_variety else None),
+        cv_maturity_display=(normalized_cv_maturity if normalized_cv_maturity else None),
+        cv_confidence_display=cv_confidence_pct,
         weights_used=weights_used,
         api_visual_features=api_visual_features,
         api_agronomic_input=api_agronomic_input,

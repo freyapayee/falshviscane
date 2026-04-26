@@ -122,6 +122,20 @@
                     </span>
                 </div>
             </div>
+            {% if cv_variety_display or cv_maturity_display %}
+                <div class="result-row" style="margin-top: 14px;">
+                    <span class="result-label">
+                        <span class="result-icon">
+                            <ion-icon name="scan-outline"></ion-icon>
+                        </span>
+                        Computer Vision
+                    </span>
+                    <span class="result-value" style="font-size: 0.92rem; text-align: right;">
+                        {% if cv_variety_display %}Variety: {{ cv_variety_display }}{% endif %}
+                        {% if cv_maturity_display %}{% if cv_variety_display %}<br>{% endif %}Maturity: {{ cv_maturity_display.replace('_', ' ').title() }}{% endif %}
+                    </span>
+                </div>
+            {% endif %}
         </section>
         <div class="mobile-actions">
             <a class="btn ghost" href="/homepage#calc-form">

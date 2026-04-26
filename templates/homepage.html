@@ -369,7 +369,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-top: 41px;
+            margin-top: 14px;
             padding: 14px;
             border: 1px solid var(--neutral-200);
             border-radius: 24px;
@@ -563,12 +563,427 @@
         .stats-grid.stats-grid-inputs .stat-card-tons {
             grid-column: 1 / -1 !important;
         }
+
+        .camera-upload-status {
+            margin-top: 10px;
+            text-align: center;
+            min-height: 1.2em;
+            color: #5f6f61;
+            font-size: 0.92rem;
+        }
+
+        .camera-upload-status.is-error {
+            color: #c45b5b;
+        }
+
+        .camera-upload-status.is-success {
+            color: #2f6a33;
+        }
+
+        .camera-preview-image {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 2;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 180ms ease;
+        }
+
+        .camera-preview-image.is-visible {
+            opacity: 1;
+        }
+
+        .cv-results-panel {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border: 1px solid rgba(67, 160, 71, 0.24);
+            border-radius: 14px;
+            background: linear-gradient(180deg, #fbfefb 0%, #f3faf2 100%);
+        }
+
+        .cv-results-title {
+            margin: 0 0 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #2f6a33;
+        }
+
+        .cv-results-main {
+            font-size: 0.92rem;
+            color: #233227;
+            line-height: 1.35;
+            margin: 0;
+        }
+
+        .cv-results-meta {
+            margin-top: 8px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: #576458;
+        }
+
+        .camera-controls {
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .camera-controls .camera-capture {
+            width: 78px;
+            height: 78px;
+            font-size: 11px;
+            line-height: 1.15;
+        }
+
         .dashboard-container > .panel + .panel {
             margin-top: 20px;
         }
         @media (max-width: 840px) {
             .ag-selector-card {
                 padding-bottom: calc(16px + var(--variety-helper-space));
+            }
+        }
+
+        @media (max-width: 768px) {
+            html,
+            body {
+                font-size: 14px;
+            }
+
+            .dashboard-header {
+                padding: 14px 0 76px;
+                border-radius: 0 0 26px 26px;
+            }
+
+            .header-content {
+                padding: 0 14px;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            .brand-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 12px;
+            }
+
+            .brand-title {
+                font-size: 16px;
+            }
+
+            .brand-subtitle {
+                font-size: 11px;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+                gap: 8px;
+            }
+
+            .status-pill {
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+
+            .header-actions .btn.light {
+                border-radius: 12px;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .dashboard-container.farmer-mobile-shell {
+                max-width: 460px;
+                margin-top: -52px;
+                padding: 0 10px 118px;
+            }
+
+            .hero-panel {
+                padding: 16px;
+                border-radius: 20px;
+                margin-bottom: 14px;
+                gap: 12px;
+            }
+
+            .hero-content h2 {
+                font-size: 20px;
+            }
+
+            .hero-content p {
+                font-size: 13px;
+            }
+
+            .hero-actions {
+                width: 100%;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .hero-actions .btn {
+                width: 100%;
+                min-width: 0;
+                padding: 12px 10px;
+                font-size: 13px;
+                border-radius: 14px;
+            }
+
+            .stats-grid.stats-grid-inputs {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                row-gap: 10px;
+                column-gap: 10px;
+                --variety-helper-space: 18px;
+            }
+
+            .stats-grid.stats-grid-inputs > .stat-card {
+                padding: 12px 10px 14px;
+                border-radius: 16px;
+                min-width: 0;
+            }
+
+            .ag-selector-card {
+                padding-bottom: 14px;
+            }
+
+            .stat-label {
+                font-size: 10px;
+                letter-spacing: 0.7px;
+            }
+
+            .variety-trigger,
+            .selector-trigger {
+                min-height: 74px;
+                margin-top: 10px;
+                padding: 10px;
+                border-radius: 16px;
+            }
+
+            .variety-panel-inner,
+            .selector-panel-inner {
+                border-radius: 18px;
+                padding: 10px;
+            }
+
+            .variety-grid {
+                gap: 8px;
+            }
+
+            .variety-tile,
+            .variety-tile-content {
+                min-height: 132px;
+                border-radius: 18px;
+            }
+
+            .selector-grid,
+            .selector-grid.two-col {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+
+            .selector-option {
+                min-height: 52px;
+                border-radius: 16px;
+                padding: 8px;
+            }
+
+            .selector-option-value {
+                font-size: 0.92rem;
+            }
+
+            .section-grid,
+            .section-grid.two-col {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                margin-bottom: 14px;
+            }
+
+            .panel {
+                padding: 14px;
+                border-radius: 18px;
+                min-width: 0;
+            }
+
+            .panel-header {
+                margin-bottom: 12px;
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            .panel-title {
+                font-size: 15px;
+            }
+
+            .panel-subtitle,
+            .list-meta {
+                font-size: 12px;
+            }
+
+            .badge,
+            .tag {
+                font-size: 10px;
+                padding: 4px 8px;
+            }
+
+            .list-row,
+            .recent-item {
+                gap: 8px;
+            }
+
+            .list-row h4,
+            .recent-item h4 {
+                font-size: 13px;
+                line-height: 1.25;
+                word-break: break-word;
+            }
+
+            .stat-select,
+            .stat-input,
+            textarea.stat-input {
+                font-size: 13px;
+            }
+
+            .stat-action {
+                font-size: 13px;
+                padding: 10px 12px;
+            }
+
+            .action-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .scan-gallery-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .footer-link {
+                margin-top: 14px;
+                font-size: 11px;
+            }
+
+            .farmer-bottom-nav {
+                width: min(460px, calc(100% - 16px));
+                bottom: 8px;
+                padding: 6px;
+                border-radius: 16px;
+            }
+
+            .farmer-bottom-link {
+                min-height: 54px;
+                font-size: 10px;
+            }
+
+            .camera-overlay {
+                padding: 10px;
+            }
+
+            .camera-shell {
+                gap: 10px;
+            }
+
+            .camera-controls {
+                justify-content: center;
+            }
+
+            .camera-controls .camera-capture {
+                width: 70px;
+                height: 70px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            html,
+            body {
+                font-size: 13px;
+            }
+
+            .status-pill {
+                display: none;
+            }
+
+            .hero-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .selector-grid,
+            .selector-grid.two-col {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid.stats-grid-inputs {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                row-gap: 8px;
+                column-gap: 8px;
+            }
+
+            .stats-grid.stats-grid-inputs > .stat-card {
+                padding: 10px 8px 12px;
+                border-radius: 14px;
+            }
+
+            .ag-selector-card {
+                padding-bottom: 12px;
+            }
+
+            .variety-trigger,
+            .selector-trigger {
+                min-height: 68px;
+                margin-top: 8px;
+                padding: 8px;
+                border-radius: 14px;
+            }
+
+            .action-grid,
+            .scan-gallery-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .variety-trigger-kicker,
+            .selector-trigger-title {
+                font-size: clamp(0.9rem, 4.5vw, 1.05rem);
+            }
+
+            .variety-trigger-value,
+            .selector-trigger-value {
+                font-size: 11px;
+                line-height: 1.25;
+            }
+
+            .panel-title {
+                font-size: 14px;
+            }
+
+            .panel-subtitle,
+            .list-meta {
+                font-size: 11px;
+            }
+
+            .hero-content h2 {
+                font-size: 18px;
+            }
+
+            .hero-content p {
+                font-size: 12px;
+            }
+
+            .hero-actions .btn {
+                font-size: 12px;
+                padding: 10px 8px;
+            }
+
+            .farmer-bottom-link {
+                min-height: 50px;
+                font-size: 9px;
+            }
+
+            .farmer-bottom-link ion-icon {
+                font-size: 16px;
             }
         }
     </style>
@@ -635,6 +1050,9 @@
             <div class="stat-card stat-card-variety">
                 <div class="stat-label">Variety</div>
                 <input type="hidden" name="variety" id="variety-input" required>
+                <input type="hidden" name="cv_maturity_status" id="cv-maturity-status-input">
+                <input type="hidden" name="cv_variety_detected" id="cv-variety-detected-input">
+                <input type="hidden" name="cv_prediction_applied" id="cv-prediction-applied-input" value="0">
                 <button class="variety-trigger" id="variety-trigger" type="button" aria-expanded="false" aria-controls="variety-panel">
                     <span class="variety-trigger-label">
                         <span class="variety-trigger-preview" id="variety-trigger-preview" aria-hidden="true"></span>
@@ -857,20 +1275,35 @@
                     </div>
                     <span class="badge"><ion-icon name="time-outline"></ion-icon>Updated 10 min ago</span>
                 </div>
-                {% if recent_scans %}
-                    {% for scan in recent_scans %}
+                {% if recent_scan_cards %}
+                    {% for card in recent_scan_cards %}
+                        {% set scan = card.scan %}
+                        {% set cv_upload = card.cv_upload %}
                         <div class="recent-item">
-                            <div class="recent-grade">{{ scan.grade }}</div>
+                            <div class="recent-grade">{{ scan.grade if scan else 'CV' }}</div>
                             <div style="flex: 1;">
-                                <h4 style="margin: 0;">{{ scan.plot_name }}</h4>
-                                <div class="list-meta">{{ scan.created_at.strftime('%b %d, %I:%M %p') }} | Maturity {{ scan.maturity_pct }}%</div>
+                                <h4 style="margin: 0;">{{ scan.plot_name if scan else (cv_upload.original_filename or 'Uploaded Scan') }}</h4>
+                                {% if scan %}
+                                    <div class="list-meta">{{ scan.created_at.strftime('%b %d, %I:%M %p') }} | Maturity {{ scan.maturity_pct }}%</div>
+                                {% elif cv_upload %}
+                                    <div class="list-meta">{{ cv_upload.created_at.strftime('%b %d, %I:%M %p') if cv_upload.created_at else 'Date unavailable' }} | Computer vision upload</div>
+                                {% endif %}
+                                {% if cv_upload %}
+                                    <div class="list-meta">Uploaded: {{ cv_upload.original_filename or 'image' }}</div>
+                                    <div class="list-meta">Variety: {{ cv_upload.variety or 'Unknown' }} | Maturity: {{ (cv_upload.maturity_status or 'Unknown').replace('_', ' ').title() }}</div>
+                                    <form method="POST" action="{{ url_for('delete_cv_upload', upload_id=cv_upload.id) }}" class="recent-picture-remove-form" onsubmit="return confirm('Remove this uploaded picture from recent scans?');">
+                                        <button type="submit" class="tag alert">Remove Picture</button>
+                                    </form>
+                                {% endif %}
                             </div>
-                            {% if scan.status == 'ready' %}
+                            {% if scan and scan.status == 'ready' %}
                                 <span class="tag success">Ready</span>
-                            {% elif scan.status == 'monitor' %}
+                            {% elif scan and scan.status == 'monitor' %}
                                 <span class="tag warning">Monitor</span>
-                            {% else %}
+                            {% elif scan %}
                                 <span class="tag">Healthy</span>
+                            {% else %}
+                                <span class="tag">Uploaded</span>
                             {% endif %}
                         </div>
                     {% endfor %}
@@ -899,6 +1332,24 @@
                         <ion-icon name="document-text-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
                         <div>Agronomic Input Logs</div>
                     </a>
+                </div>
+                <div class="scan-gallery-block">
+                    <div class="scan-gallery-title">Scan Gallery</div>
+                    {% if recent_cv_uploads %}
+                        <div class="scan-gallery-grid">
+                            {% for upload in recent_cv_uploads %}
+                                <figure class="scan-gallery-item">
+                                    <img src="{{ url_for('static', filename=upload.image_path) }}" alt="Uploaded sugarcane scan" loading="lazy">
+                                    <figcaption>
+                                        <strong>Variety:</strong> {{ upload.variety or 'Unknown' }}<br>
+                                        <strong>Maturity:</strong> {{ (upload.maturity_status or 'Unknown').replace('_', ' ').title() }}
+                                    </figcaption>
+                                </figure>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="list-meta">No uploaded scans yet.</div>
+                    {% endif %}
                 </div>
             </div>
         </section>
@@ -945,20 +1396,32 @@
     <div id="camera-overlay" class="camera-overlay" aria-hidden="true">
         <div class="camera-shell">
             <div class="camera-header">
-                <div class="camera-title">Align the sugarcane stalk vertically</div>
+                <div class="camera-title">Align the Sugarcane Stalk</div>
                 <button type="button" class="camera-close" id="close-camera-btn">Close</button>
             </div>
             <div class="camera-viewport">
                 <video id="camera-stream" playsinline autoplay muted></video>
+                <img id="camera-preview-image" class="camera-preview-image" alt="Captured or uploaded sugarcane preview">
+                <canvas id="camera-canvas" hidden></canvas>
                 <div class="camera-flash" id="camera-flash" aria-hidden="true"></div>
-                <div class="orientation-overlay" aria-hidden="true">
-                    Please rotate your phone to Portrait
-                </div>
             </div>
             <div class="camera-controls">
                 <button class="camera-capture" id="capture-btn" type="button">
                     Capture
                 </button>
+                <button class="camera-capture" id="upload-photo-btn" type="button">
+                    Upload Picture
+                </button>
+                <input id="upload-photo-input" type="file" accept="image/*" hidden>
+            </div>
+            <div class="camera-upload-status" id="camera-upload-status" role="status" aria-live="polite"></div>
+            <div class="cv-results-panel" id="cv-results-panel" hidden>
+                <p class="cv-results-title">Computer Vision Result</p>
+                <p class="cv-results-main" id="cv-results-main">No result yet.</p>
+                <div class="cv-results-meta">
+                    <div id="cv-results-variety">Variety: -</div>
+                    <div id="cv-results-maturity">Maturity: -</div>
+                </div>
             </div>
         </div>
     </div>
@@ -968,10 +1431,22 @@
             const cameraOverlay = document.getElementById('camera-overlay');
             const closeCameraBtn = document.getElementById('close-camera-btn');
             const captureBtn = document.getElementById('capture-btn');
+            const uploadPhotoBtn = document.getElementById('upload-photo-btn');
+            const uploadPhotoInput = document.getElementById('upload-photo-input');
             const cameraStream = document.getElementById('camera-stream');
+            const cameraPreviewImage = document.getElementById('camera-preview-image');
+            const cameraCanvas = document.getElementById('camera-canvas');
             const cameraFlash = document.getElementById('camera-flash');
+            const cameraUploadStatus = document.getElementById('camera-upload-status');
+            const cvResultsPanel = document.getElementById('cv-results-panel');
+            const cvResultsMain = document.getElementById('cv-results-main');
+            const cvResultsVariety = document.getElementById('cv-results-variety');
+            const cvResultsMaturity = document.getElementById('cv-results-maturity');
             const calcForm = document.getElementById('calc-form');
             const varietyInput = document.getElementById('variety-input');
+            const cvMaturityStatusInput = document.getElementById('cv-maturity-status-input');
+            const cvVarietyDetectedInput = document.getElementById('cv-variety-detected-input');
+            const cvPredictionAppliedInput = document.getElementById('cv-prediction-applied-input');
             const varietyTrigger = document.getElementById('variety-trigger');
             const varietyTriggerTitle = document.getElementById('variety-trigger-title');
             const varietyTriggerValue = document.getElementById('variety-trigger-value');
@@ -993,6 +1468,9 @@
             }));
             let activeStream = null;
             let isStarting = false;
+            let isUploading = false;
+            let isCameraReady = false;
+            let previewObjectUrl = null;
 
             const setVarietyPanelState = (isOpen) => {
                 if (!varietyPanel || !varietyTrigger) {
@@ -1022,6 +1500,57 @@
                         setAgPanelState(selector, false);
                     }
                 });
+            };
+
+            const normalizeCvVariety = (value) => {
+                const cleaned = (value || '').trim();
+                if (!cleaned) {
+                    return '';
+                }
+                const upper = cleaned.toUpperCase();
+                const map = {
+                    '524': 'VMC 84-524',
+                    'VMC 84-524': 'VMC 84-524',
+                    '847': 'VMC 84-947',
+                    'VMC 84-947': 'VMC 84-947',
+                    'MAURITIO': 'MAURITIO RC888',
+                    'MAURITIO RC888': 'MAURITIO RC888',
+                };
+                return map[upper] || cleaned;
+            };
+
+            const setPreviewImage = (blobOrFile) => {
+                if (!cameraPreviewImage) {
+                    return;
+                }
+                if (previewObjectUrl) {
+                    URL.revokeObjectURL(previewObjectUrl);
+                    previewObjectUrl = null;
+                }
+                if (!blobOrFile) {
+                    cameraPreviewImage.removeAttribute('src');
+                    cameraPreviewImage.classList.remove('is-visible');
+                    return;
+                }
+                previewObjectUrl = URL.createObjectURL(blobOrFile);
+                cameraPreviewImage.src = previewObjectUrl;
+                cameraPreviewImage.classList.add('is-visible');
+            };
+
+            const renderCvResultPanel = (bestPrediction) => {
+                if (!cvResultsPanel || !bestPrediction) {
+                    return;
+                }
+                cvResultsPanel.hidden = false;
+                if (cvResultsMain) {
+                    cvResultsMain.textContent = 'Analysis complete.';
+                }
+                if (cvResultsVariety) {
+                    cvResultsVariety.textContent = `Variety: ${normalizeCvVariety(bestPrediction.variety) || '-'}`;
+                }
+                if (cvResultsMaturity) {
+                    cvResultsMaturity.textContent = `Maturity: ${bestPrediction.maturityStatus || '-'}`;
+                }
             };
 
             const syncVarietySelection = (selectedValue) => {
@@ -1127,6 +1656,21 @@
             if (calcForm) {
                 calcForm.addEventListener('submit', (event) => {
                     if (!varietyInput || varietyInput.value) {
+                        const cvDetectedVariety = cvVarietyDetectedInput?.value || '';
+                        if (cvDetectedVariety && varietyInput?.value && cvDetectedVariety !== varietyInput.value) {
+                            event.preventDefault();
+                            closeAllSelectorPanels(varietyPanel);
+                            setVarietyPanelState(true);
+                            if (varietyHelper) {
+                                varietyHelper.textContent = `Computer vision detected ${cvDetectedVariety}. Please choose this same variety before calculating.`;
+                                varietyHelper.classList.add('is-error');
+                            }
+                            const matchingTile = varietyTiles.find((tile) => tile.dataset.variety === cvDetectedVariety);
+                            if (matchingTile) {
+                                matchingTile.focus();
+                            }
+                            return;
+                        }
                         const missingAgSelector = agSelectorStates.find((selector) => !selector.input?.value);
                         if (!missingAgSelector) {
                             return;
@@ -1179,6 +1723,29 @@
                 if (cameraStream) {
                     cameraStream.srcObject = null;
                 }
+                isCameraReady = false;
+            };
+
+            const setCaptureAvailability = (available) => {
+                isCameraReady = !!available;
+                if (!captureBtn) {
+                    return;
+                }
+                captureBtn.disabled = !available || isUploading;
+                captureBtn.textContent = available ? 'Capture' : 'Camera Unavailable';
+            };
+
+            const getCameraStartErrorMessage = (error) => {
+                if (!window.isSecureContext) {
+                    return 'Camera needs HTTPS on mobile. Use Upload Picture or open this site with https://.';
+                }
+                if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') {
+                    return 'Camera permission denied. Allow camera access in your browser settings.';
+                }
+                if (error?.name === 'NotFoundError' || error?.name === 'OverconstrainedError') {
+                    return 'No usable camera found on this device.';
+                }
+                return 'Unable to open camera. You can still use Upload Picture.';
             };
 
             const startCamera = async () => {
@@ -1201,6 +1768,7 @@
                 activeStream = stream;
                 cameraStream.srcObject = stream;
                 await cameraStream.play();
+                setCaptureAvailability(true);
                 const [track] = stream.getVideoTracks();
                 if (track && track.getCapabilities && track.applyConstraints) {
                     const capabilities = track.getCapabilities();
@@ -1224,6 +1792,9 @@
                 }
                 isStarting = true;
                 setCameraButtonState(true);
+                setCameraStatus('');
+                setPreviewImage(null);
+                setCaptureAvailability(false);
                 cameraOverlay.classList.add('is-active');
                 cameraOverlay.setAttribute('aria-hidden', 'false');
                 document.body.classList.add('camera-open');
@@ -1231,9 +1802,8 @@
                     await startCamera();
                 } catch (err) {
                     stopCamera();
-                    cameraOverlay.classList.remove('is-active');
-                    cameraOverlay.setAttribute('aria-hidden', 'true');
-                    document.body.classList.remove('camera-open');
+                    setCaptureAvailability(false);
+                    setCameraStatus(getCameraStartErrorMessage(err), 'error');
                 } finally {
                     setCameraButtonState(false);
                     isStarting = false;
@@ -1247,6 +1817,8 @@
                     cameraOverlay.setAttribute('aria-hidden', 'true');
                 }
                 document.body.classList.remove('camera-open');
+                setCameraStatus('');
+                setPreviewImage(null);
             };
 
             const triggerFlash = () => {
@@ -1259,6 +1831,249 @@
                         cameraFlash.classList.remove('is-active');
                     });
                 });
+            };
+
+            const setCaptureButtonState = (loading) => {
+                if (!captureBtn) {
+                    return;
+                }
+                if (loading) {
+                    captureBtn.disabled = true;
+                    captureBtn.textContent = 'Uploading...';
+                } else {
+                    setCaptureAvailability(isCameraReady);
+                }
+                if (uploadPhotoBtn) {
+                    uploadPhotoBtn.disabled = loading;
+                    uploadPhotoBtn.textContent = loading ? 'Uploading...' : 'Upload Picture';
+                }
+            };
+
+            const setCameraStatus = (message, tone = '') => {
+                if (!cameraUploadStatus) {
+                    return;
+                }
+                cameraUploadStatus.textContent = message || '';
+                cameraUploadStatus.classList.toggle('is-error', tone === 'error');
+                cameraUploadStatus.classList.toggle('is-success', tone === 'success');
+            };
+
+            const extractPredictionEntries = (payload) => {
+                const models = payload?.models;
+                if (!models || typeof models !== 'object') {
+                    return [];
+                }
+
+                const entries = Object.entries(models)
+                    .map(([modelName, modelPayload]) => {
+                        const prediction = modelPayload?.prediction;
+                        if (!prediction) {
+                            return null;
+                        }
+                        const confidenceRaw = Number(prediction.confidence);
+                        const confidence = Number.isFinite(confidenceRaw) ? confidenceRaw : -1;
+                        const confidenceLabel = Number.isFinite(confidenceRaw) ? `${(confidenceRaw * 100).toFixed(1)}%` : 'N/A';
+                        return {
+                            modelName,
+                            className: prediction.class_name || 'Unknown',
+                            variety: prediction.variety || '',
+                            maturityStatus: prediction.maturity_status || 'Unknown',
+                            confidence,
+                            confidenceLabel,
+                        };
+                    })
+                    .filter(Boolean);
+
+                entries.sort((a, b) => b.confidence - a.confidence);
+                return entries;
+            };
+
+            const parsePredictionResponse = (payload) => {
+                const entries = extractPredictionEntries(payload);
+                if (!entries.length) {
+                    return '';
+                }
+                return entries
+                    .map((entry) => `${entry.modelName}: ${entry.className} (${entry.maturityStatus}) • ${entry.confidenceLabel}`)
+                    .join(' | ');
+            };
+
+            const getBestPrediction = (payload) => {
+                const entries = extractPredictionEntries(payload);
+                return entries[0] || null;
+            };
+
+            const captureFrameBlob = () => {
+                return new Promise((resolve, reject) => {
+                    if (!cameraStream || !cameraCanvas || !cameraStream.videoWidth || !cameraStream.videoHeight) {
+                        reject(new Error('Camera frame is not ready.'));
+                        return;
+                    }
+                    cameraCanvas.width = cameraStream.videoWidth;
+                    cameraCanvas.height = cameraStream.videoHeight;
+                    const context = cameraCanvas.getContext('2d');
+                    if (!context) {
+                        reject(new Error('Could not prepare capture canvas.'));
+                        return;
+                    }
+                    context.drawImage(cameraStream, 0, 0, cameraCanvas.width, cameraCanvas.height);
+                    cameraCanvas.toBlob((blob) => {
+                        if (!blob) {
+                            reject(new Error('Failed to capture image.'));
+                            return;
+                        }
+                        resolve(blob);
+                    }, 'image/jpeg', 0.92);
+                });
+            };
+
+            const uploadCapture = async () => {
+                if (isUploading) {
+                    return;
+                }
+                isUploading = true;
+                setCaptureButtonState(true);
+                setCameraStatus('Capturing image...');
+                try {
+                    const blob = await captureFrameBlob();
+                    setPreviewImage(blob);
+                    await uploadImageForPrediction(blob, `capture-${Date.now()}.jpg`);
+                } catch (error) {
+                    setCameraStatus(error?.message || 'Capture upload failed.', 'error');
+                } finally {
+                    setCaptureButtonState(false);
+                    isUploading = false;
+                }
+            };
+
+            const isLikelyHeicFile = (file) => {
+                const fileName = (file?.name || '').toLowerCase();
+                const fileType = (file?.type || '').toLowerCase();
+                return fileType.includes('heic') || fileType.includes('heif') || fileName.endsWith('.heic') || fileName.endsWith('.heif');
+            };
+
+            const normalizeUploadImage = async (file) => {
+                if (!file) {
+                    throw new Error('No image selected.');
+                }
+                if (isLikelyHeicFile(file)) {
+                    throw new Error('HEIC/HEIF photos are not supported. Use JPG or PNG, or set iPhone Camera Format to Most Compatible.');
+                }
+
+                const objectUrl = URL.createObjectURL(file);
+                try {
+                    const image = await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => resolve(img);
+                        img.onerror = () => reject(new Error('Could not read selected image.'));
+                        img.src = objectUrl;
+                    });
+
+                    const maxDimension = 1600;
+                    let targetWidth = image.width;
+                    let targetHeight = image.height;
+                    if (targetWidth > maxDimension || targetHeight > maxDimension) {
+                        const scale = Math.min(maxDimension / targetWidth, maxDimension / targetHeight);
+                        targetWidth = Math.max(1, Math.round(targetWidth * scale));
+                        targetHeight = Math.max(1, Math.round(targetHeight * scale));
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+                    const context = canvas.getContext('2d');
+                    if (!context) {
+                        return {
+                            uploadFile: file,
+                            uploadFilename: file.name || `upload-${Date.now()}.jpg`,
+                        };
+                    }
+                    context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+                    const jpegBlob = await new Promise((resolve, reject) => {
+                        canvas.toBlob((blob) => {
+                            if (!blob) {
+                                reject(new Error('Could not prepare image for upload.'));
+                                return;
+                            }
+                            resolve(blob);
+                        }, 'image/jpeg', 0.9);
+                    });
+
+                    const baseName = (file.name || 'upload')
+                        .replace(/\.[^.]+$/, '')
+                        .replace(/[^a-z0-9_-]+/gi, '-')
+                        .replace(/^-+|-+$/g, '') || 'upload';
+
+                    return {
+                        uploadFile: jpegBlob,
+                        uploadFilename: `${baseName}.jpg`,
+                    };
+                } finally {
+                    URL.revokeObjectURL(objectUrl);
+                }
+            };
+
+            const openUploadPicker = () => {
+                if (!uploadPhotoInput) {
+                    return;
+                }
+                uploadPhotoInput.value = '';
+                if (typeof uploadPhotoInput.showPicker === 'function') {
+                    uploadPhotoInput.showPicker();
+                    return;
+                }
+                uploadPhotoInput.removeAttribute('hidden');
+                uploadPhotoInput.click();
+                window.setTimeout(() => {
+                    uploadPhotoInput.setAttribute('hidden', '');
+                }, 0);
+            };
+
+            const uploadImageForPrediction = async (fileOrBlob, filename = 'upload.jpg') => {
+                const formData = new FormData();
+                formData.append('file', fileOrBlob, filename);
+
+                setCameraStatus('Uploading photo for prediction...');
+                const response = await fetch('/api/scan/predict?top_k=3', {
+                    method: 'POST',
+                    headers: { Accept: 'application/json' },
+                    body: formData,
+                });
+
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (parseError) {
+                    payload = null;
+                }
+
+                if (!response.ok) {
+                    const errorMessage = payload?.error || 'Upload failed.';
+                    const errorDetails = payload?.details ? ` ${payload.details}` : '';
+                    throw new Error(`${errorMessage}${errorDetails}`);
+                }
+
+                const bestPrediction = getBestPrediction(payload);
+                if (cvMaturityStatusInput) {
+                    cvMaturityStatusInput.value = bestPrediction?.maturityStatus || '';
+                }
+                const detectedVariety = normalizeCvVariety(bestPrediction?.variety || '');
+                if (cvVarietyDetectedInput) {
+                    cvVarietyDetectedInput.value = detectedVariety || '';
+                }
+                if (cvPredictionAppliedInput) {
+                    cvPredictionAppliedInput.value = '1';
+                }
+                if (detectedVariety) {
+                    syncVarietySelection(detectedVariety);
+                    if (varietyHelper) {
+                        varietyHelper.textContent = `${detectedVariety} auto-selected from computer vision. Please confirm it is correct.`;
+                        varietyHelper.classList.remove('is-error');
+                    }
+                }
+                renderCvResultPanel(bestPrediction);
+                setCameraStatus('Photo analyzed successfully.', 'success');
             };
 
             if (openCameraBtn) {
@@ -1275,10 +2090,44 @@
 
             if (captureBtn) {
                 captureBtn.addEventListener('click', () => {
+                    if (!isCameraReady) {
+                        setCameraStatus('Camera is unavailable. Use Upload Picture instead.', 'error');
+                        return;
+                    }
                     if (navigator.vibrate) {
                         navigator.vibrate(50);
                     }
                     triggerFlash();
+                    uploadCapture();
+                });
+            }
+
+            if (uploadPhotoBtn && uploadPhotoInput) {
+                uploadPhotoBtn.addEventListener('click', () => {
+                    if (!isUploading) {
+                        openUploadPicker();
+                    }
+                });
+
+                uploadPhotoInput.addEventListener('change', async (event) => {
+                    const selectedFile = event.target.files?.[0];
+                    if (!selectedFile || isUploading) {
+                        return;
+                    }
+                    isUploading = true;
+                    setCaptureButtonState(true);
+                    setCameraStatus('Preparing selected image...');
+                    try {
+                        const prepared = await normalizeUploadImage(selectedFile);
+                        setPreviewImage(prepared.uploadFile);
+                        await uploadImageForPrediction(prepared.uploadFile, prepared.uploadFilename);
+                    } catch (error) {
+                        setCameraStatus(error?.message || 'Image upload failed.', 'error');
+                    } finally {
+                        setCaptureButtonState(false);
+                        isUploading = false;
+                        uploadPhotoInput.value = '';
+                    }
                 });
             }
 
