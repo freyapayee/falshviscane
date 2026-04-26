@@ -36,16 +36,59 @@ Keep `.env.local` out of Git. Only commit `.env.example`.
 
 ## 2. Run the Flask app locally against the shared DB
 
-Create or activate your virtual environment, then install dependencies:
+Create or activate your virtual environment, then install dependencies.
 
-```bash
-.env/bin/pip install -r requirements.txt
+### Windows (PowerShell)
+
+Create venv (once):
+
+```powershell
+python -m venv .venv
 ```
 
-Start the app:
+Activate:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Install deps:
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Run:
+
+```powershell
+python app.py
+```
+
+If you see `ModuleNotFoundError: No module named 'flask'`, it means the dependencies were not installed into the currently active virtual environment. Re-run the install step above inside the activated venv.
+
+If you see a PostgreSQL connection error, your `DATABASE_URL` is missing/invalid or your local Postgres is not running. For local development without Postgres, delete/comment out `DATABASE_URL` in `.env` and the app will automatically fall back to a local SQLite file at `instance/viscane.db`.
+
+### macOS / Linux
+
+Create venv (once):
 
 ```bash
-.env/bin/python app.py
+python3 -m venv .venv
+```
+
+Activate + install deps:
+
+```bash
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Run:
+
+```bash
+python app.py
 ```
 
 The app will use `DATABASE_URL` from `.env.local` when set.

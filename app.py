@@ -6,6 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import lru_cache, wraps
 from io import StringIO
+from pathlib import Path
 from shutil import disk_usage
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -57,6 +58,81 @@ def load_env_file(path, override=False):
 load_env_file(".env.example", override=False)
 load_env_file(".env.local", override=True)
 load_env_file(".env", override=True)
+
+def _load_env():
+    try:
+        from dotenv import load_dotenv
+    except Exception:
+        return
+
+    try:
+        load_dotenv(dotenv_path=Path(__file__).with_name('.env'), override=False)
+    except Exception:
+        pass
+
+_load_env()
+
+DEFAULT_LOCAL_POSTGRES_URL = 'postgresql://user:password@localhost:5433/viscane_db'
+
+
+def _looks_like_example_database_url(url: str) -> bool:
+    lowered = url.lower()
+    return 'your-db-host' in lowered or 'shared_user:shared_password' in lowered
+
+
+def _sqlite_fallback_url() -> str:
+    instance_dir = Path(__file__).resolve().parent / 'instance'
+    instance_dir.mkdir(parents=True, exist_ok=True)
+    db_path = (instance_dir / 'viscane.db').resolve()
+    return f"sqlite:///{db_path.as_posix()}"
+
+
+def _can_connect_postgres(url: str) -> bool:
+    try:
+        from sqlalchemy import create_engine
+
+        engine = create_engine(url, connect_args={"connect_timeout": 2})
+        try:
+            with engine.connect():
+                return True
+        finally:
+            engine.dispose()
+    except Exception:
+        return False
+
+
+def _resolve_database_url() -> str:
+    configured = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL')
+    if configured and _looks_like_example_database_url(configured):
+        configured = None
+
+    if configured:
+        database_url = configured
+        source = 'env'
+    else:
+        database_url = DEFAULT_LOCAL_POSTGRES_URL
+        source = 'default_local_postgres'
+
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+    if database_url.startswith('postgresql://'):
+        if database_url == DEFAULT_LOCAL_POSTGRES_URL or '@localhost:5433/' in database_url or '@127.0.0.1:5433/' in database_url:
+            source = 'default_local_postgres'
+
+        if source == 'default_local_postgres' and not _can_connect_postgres(database_url):
+            fallback = _sqlite_fallback_url()
+            print(f"[VISCANE] PostgreSQL not reachable at {database_url}; falling back to SQLite at {fallback}")
+            return fallback
+        return database_url
+
+    if database_url.startswith('sqlite:'):
+        return database_url
+
+    raise RuntimeError(
+        "Invalid database URL scheme. Set `DATABASE_URL` (or `SQLALCHEMY_DATABASE_URI`) to a PostgreSQL URL "
+        "like `postgresql://user:pass@host:5432/db` (recommended), or to SQLite for local dev."
+    )
 
 DEFAULT_VARIETY_WEIGHTS = {
     "VMC 84-524": {
@@ -247,6 +323,7 @@ CV_UPLOAD_RELATIVE_DIR = os.path.join("uploads", "cv_scans")
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('VISCANE_SECRET_KEY', 'change-this-key')
 
+<<<<<<< Updated upstream
 database_url = (
     os.getenv('SQLALCHEMY_DATABASE_URI')
     or os.getenv('DATABASE_URL')
@@ -257,13 +334,23 @@ if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 if not database_url.startswith('postgresql://'):
     raise RuntimeError('This project is PostgreSQL-only. Set DATABASE_URL to a PostgreSQL connection string.')
+=======
+database_url = _resolve_database_url()
+>>>>>>> Stashed changes
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception as exc:
+        raise RuntimeError(
+            f"Database connection failed for SQLALCHEMY_DATABASE_URI={database_url!r}. "
+            "Start PostgreSQL (local: `docker compose up -d db` on port 5433) or set `DATABASE_URL` in your "
+            "environment / .env to a valid connection string."
+        ) from exc
 
     try:
         if not SystemConfig.query.first():

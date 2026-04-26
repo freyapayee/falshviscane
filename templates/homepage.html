@@ -9,7 +9,7 @@
     <style>
         .stats-grid.stats-grid-inputs {
             display: grid !important;
-            grid-template-columns: repeat(2, minmax(320px, 1fr)) !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             align-items: start;
             column-gap: 18px;
             row-gap: 18px;
@@ -535,6 +535,11 @@
         @media (max-width: 900px) {
             .stats-grid.stats-grid-inputs {
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+<<<<<<< Updated upstream
+=======
+                column-gap: 14px;
+                row-gap: 14px;
+>>>>>>> Stashed changes
             }
 
             .variety-grid {
@@ -564,6 +569,7 @@
             grid-column: 1 / -1 !important;
         }
 
+<<<<<<< Updated upstream
         .camera-upload-status {
             margin-top: 10px;
             text-align: center;
@@ -641,6 +647,13 @@
             line-height: 1.15;
         }
 
+=======
+        @media (max-width: 340px) {
+            .stats-grid.stats-grid-inputs {
+                grid-template-columns: 1fr !important;
+            }
+        }
+>>>>>>> Stashed changes
         .dashboard-container > .panel + .panel {
             margin-top: 20px;
         }
@@ -1401,14 +1414,19 @@
             </div>
             <div class="camera-viewport">
                 <video id="camera-stream" playsinline autoplay muted></video>
+<<<<<<< Updated upstream
                 <img id="camera-preview-image" class="camera-preview-image" alt="Captured or uploaded sugarcane preview">
                 <canvas id="camera-canvas" hidden></canvas>
+=======
+                <canvas id="camera-canvas" class="camera-canvas" hidden></canvas>
+>>>>>>> Stashed changes
                 <div class="camera-flash" id="camera-flash" aria-hidden="true"></div>
             </div>
             <div class="camera-controls">
                 <button class="camera-capture" id="capture-btn" type="button">
                     Capture
                 </button>
+<<<<<<< Updated upstream
                 <button class="camera-capture" id="upload-photo-btn" type="button">
                     Upload Picture
                 </button>
@@ -1422,6 +1440,9 @@
                     <div id="cv-results-variety">Variety: -</div>
                     <div id="cv-results-maturity">Maturity: -</div>
                 </div>
+=======
+                <input id="camera-fallback-input" type="file" accept="image/*" capture="environment" hidden>
+>>>>>>> Stashed changes
             </div>
         </div>
     </div>
@@ -1434,8 +1455,13 @@
             const uploadPhotoBtn = document.getElementById('upload-photo-btn');
             const uploadPhotoInput = document.getElementById('upload-photo-input');
             const cameraStream = document.getElementById('camera-stream');
+<<<<<<< Updated upstream
             const cameraPreviewImage = document.getElementById('camera-preview-image');
             const cameraCanvas = document.getElementById('camera-canvas');
+=======
+            const cameraCanvas = document.getElementById('camera-canvas');
+            const cameraFallbackInput = document.getElementById('camera-fallback-input');
+>>>>>>> Stashed changes
             const cameraFlash = document.getElementById('camera-flash');
             const cameraUploadStatus = document.getElementById('camera-upload-status');
             const cvResultsPanel = document.getElementById('cv-results-panel');
@@ -1468,9 +1494,14 @@
             }));
             let activeStream = null;
             let isStarting = false;
+<<<<<<< Updated upstream
             let isUploading = false;
             let isCameraReady = false;
             let previewObjectUrl = null;
+=======
+            const defaultCameraTitle = document.querySelector('.camera-title')?.textContent || '';
+            const cameraTitleEl = document.querySelector('.camera-title');
+>>>>>>> Stashed changes
 
             const setVarietyPanelState = (isOpen) => {
                 if (!varietyPanel || !varietyTrigger) {
@@ -1723,6 +1754,7 @@
                 if (cameraStream) {
                     cameraStream.srcObject = null;
                 }
+<<<<<<< Updated upstream
                 isCameraReady = false;
             };
 
@@ -1746,6 +1778,18 @@
                     return 'No usable camera found on this device.';
                 }
                 return 'Unable to open camera. You can still use Upload Picture.';
+=======
+                if (cameraCanvas) {
+                    cameraCanvas.hidden = true;
+                }
+                if (cameraStream) {
+                    cameraStream.hidden = false;
+                    cameraStream.removeAttribute('poster');
+                }
+                if (cameraTitleEl) {
+                    cameraTitleEl.textContent = defaultCameraTitle || 'Align the sugarcane stalk vertically';
+                }
+>>>>>>> Stashed changes
             };
 
             const startCamera = async () => {
@@ -1786,6 +1830,39 @@
                 }
             };
 
+            const showFallbackPicker = () => {
+                if (!cameraFallbackInput) {
+                    return false;
+                }
+                cameraFallbackInput.value = '';
+                cameraFallbackInput.click();
+                return true;
+            };
+
+            const showCapturedImage = (blob) => {
+                if (!cameraCanvas || !cameraStream || !blob) {
+                    return;
+                }
+                stopCamera();
+                cameraStream.hidden = true;
+                cameraCanvas.hidden = false;
+                const url = URL.createObjectURL(blob);
+                const img = new Image();
+                img.onload = () => {
+                    cameraCanvas.width = img.naturalWidth || 1280;
+                    cameraCanvas.height = img.naturalHeight || 720;
+                    const ctx = cameraCanvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, cameraCanvas.width, cameraCanvas.height);
+                    }
+                    URL.revokeObjectURL(url);
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+            };
+
             const openCamera = async () => {
                 if (isStarting || !cameraOverlay) {
                     return;
@@ -1799,11 +1876,42 @@
                 cameraOverlay.setAttribute('aria-hidden', 'false');
                 document.body.classList.add('camera-open');
                 try {
+                    const isAndroid = /Android/i.test(navigator.userAgent || '');
+                    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+                    if (isAndroid && window.isSecureContext) {
+                        await startCamera();
+                        return;
+                    }
+                    if (isAndroid) {
+                        if (cameraTitleEl) {
+                            cameraTitleEl.textContent = 'Opening device camera...';
+                        }
+                        showFallbackPicker();
+                        return;
+                    }
+                    if (!window.isSecureContext) {
+                        if (cameraTitleEl) {
+                            cameraTitleEl.textContent = 'Camera preview requires HTTPS. Use Capture to take a photo.';
+                        }
+                        if (isMobile) {
+                            showFallbackPicker();
+                        }
+                        return;
+                    }
                     await startCamera();
                 } catch (err) {
                     stopCamera();
+<<<<<<< Updated upstream
                     setCaptureAvailability(false);
                     setCameraStatus(getCameraStartErrorMessage(err), 'error');
+=======
+                    if (cameraTitleEl) {
+                        cameraTitleEl.textContent = 'Camera preview unavailable. Use Capture to take a photo.';
+                    }
+                    if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')) {
+                        showFallbackPicker();
+                    }
+>>>>>>> Stashed changes
                 } finally {
                     setCameraButtonState(false);
                     isStarting = false;
@@ -2098,6 +2206,7 @@
                         navigator.vibrate(50);
                     }
                     triggerFlash();
+<<<<<<< Updated upstream
                     uploadCapture();
                 });
             }
@@ -2128,6 +2237,38 @@
                         isUploading = false;
                         uploadPhotoInput.value = '';
                     }
+=======
+
+                    if (activeStream && cameraStream && cameraStream.videoWidth) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = cameraStream.videoWidth;
+                        canvas.height = cameraStream.videoHeight;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) {
+                            return;
+                        }
+                        ctx.drawImage(cameraStream, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob((blob) => {
+                            if (!blob) {
+                                return;
+                            }
+                            showCapturedImage(blob);
+                        }, 'image/jpeg', 0.92);
+                        return;
+                    }
+
+                    showFallbackPicker();
+                });
+            }
+
+            if (cameraFallbackInput) {
+                cameraFallbackInput.addEventListener('change', () => {
+                    const file = cameraFallbackInput.files && cameraFallbackInput.files[0];
+                    if (!file) {
+                        return;
+                    }
+                    showCapturedImage(file);
+>>>>>>> Stashed changes
                 });
             }
 
