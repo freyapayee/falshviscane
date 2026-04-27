@@ -1084,6 +1084,10 @@ body.farmer-layout .header-actions .btn.light ion-icon {
     z-index: 2;
 }
 
+body.admin-farmers-page .dashboard-container {
+    max-width: 1440px;
+}
+
 body.camera-open {
     overflow: hidden;
 }
@@ -1362,6 +1366,28 @@ body.admin-layout .btn.primary {
     border-color: rgba(46, 125, 50, 0.25);
 }
 
+.admin-metric-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 148px;
+}
+
+.stat-value-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0 6px;
+}
+
+.stat-trend {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--neutral-500);
+    text-align: right;
+}
+
 .stat-card-tons {
     grid-column: 1 / 5;
 }
@@ -1581,7 +1607,7 @@ body.admin-layout .btn.primary {
 }
 
 .farmer-management-grid {
-    grid-template-columns: minmax(280px, 0.95fr) minmax(720px, 1.65fr);
+    grid-template-columns: minmax(460px, 0.95fr) minmax(860px, 1.8fr);
     align-items: start;
 }
 
@@ -1613,7 +1639,7 @@ body.admin-layout .btn.primary {
 
 .admin-search-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 110px;
+    grid-template-columns: 110px minmax(0, 1fr);
     gap: 10px;
     align-items: center;
     margin-bottom: 14px;
@@ -1730,6 +1756,18 @@ body.admin-layout .btn.primary {
     border-radius: 999px;
 }
 
+.progress.health-good span {
+    background: #2E7D32;
+}
+
+.progress.health-warning span {
+    background: #EF6C00;
+}
+
+.progress.health-critical span {
+    background: #C62828;
+}
+
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -1810,9 +1848,36 @@ body.admin-layout .btn.primary {
     word-break: break-word;
 }
 
+.deactivated-accounts-panel .data-table th:nth-child(1),
+.deactivated-accounts-panel .data-table td:nth-child(1) {
+    width: 46%;
+}
+
+.deactivated-accounts-panel .data-table th:nth-child(2),
+.deactivated-accounts-panel .data-table td:nth-child(2) {
+    width: 18%;
+}
+
+.deactivated-accounts-panel .data-table th:nth-child(3),
+.deactivated-accounts-panel .data-table td:nth-child(3) {
+    width: 36%;
+    text-align: right;
+    padding-right: 0;
+}
+
 @media (max-width: 1200px) {
     .farmer-management-grid {
         grid-template-columns: minmax(280px, 1fr);
+    }
+}
+
+@media (max-width: 720px) {
+    .admin-search-row {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-search-row .btn {
+        width: 100%;
     }
 }
 
@@ -1857,6 +1922,10 @@ body.admin-layout .btn.primary {
     gap: 16px;
 }
 
+.admin-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .action-tile {
     display: block;
     border: 1px dashed var(--neutral-200);
@@ -1879,6 +1948,38 @@ body.admin-layout .btn.primary {
 .action-tile:hover {
     transform: translateY(-3px);
     box-shadow: var(--shadow-md);
+}
+
+.admin-module-panel,
+.admin-tools-panel {
+    margin-bottom: 24px;
+}
+
+.admin-module-tile {
+    background: linear-gradient(180deg, rgba(232, 245, 233, 0.92) 0%, rgba(255, 255, 255, 1) 100%);
+    border-style: solid;
+    border-color: rgba(67, 160, 71, 0.16);
+}
+
+.admin-module-tile ion-icon {
+    color: #2E7D32;
+}
+
+.admin-tool-tile {
+    background: linear-gradient(180deg, rgba(227, 242, 253, 0.92) 0%, rgba(255, 255, 255, 1) 100%);
+    border-style: solid;
+    border-color: rgba(30, 136, 229, 0.16);
+}
+
+.admin-tool-tile ion-icon {
+    color: #1565C0 !important;
+}
+
+.signout-tile {
+    width: fit-content;
+    min-width: 160px;
+    justify-self: start;
+    padding: 14px 18px;
 }
 
 .scan-gallery-block {
@@ -2023,6 +2124,96 @@ body.modal-open {
     font-weight: 700;
     background: var(--accent-soft);
     color: var(--accent-strong);
+}
+
+.admin-log-row.is-alert {
+    background: rgba(255, 235, 238, 0.72);
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-bottom: none;
+}
+
+.admin-log-badge {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.admin-log-badge.is-alert {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.admin-log-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-log-time {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--neutral-500);
+    white-space: nowrap;
+}
+
+.admin-table-filter {
+    padding: 8px 12px;
+    gap: 6px;
+}
+
+.admin-user-table {
+    table-layout: fixed;
+}
+
+.admin-user-table tbody tr:nth-child(even) {
+    background: rgba(244, 247, 246, 0.72);
+}
+
+.admin-user-table th:nth-child(1),
+.admin-user-table td:nth-child(1) {
+    width: 26%;
+}
+
+.admin-user-table th:nth-child(2),
+.admin-user-table td:nth-child(2) {
+    width: 14%;
+}
+
+.admin-user-table th:nth-child(3),
+.admin-user-table td:nth-child(3) {
+    width: 16%;
+}
+
+.admin-user-table th:nth-child(4),
+.admin-user-table td:nth-child(4) {
+    width: 18%;
+}
+
+.admin-user-table th:nth-child(5),
+.admin-user-table td:nth-child(5) {
+    width: 14%;
+}
+
+@media (max-width: 1100px) {
+    .admin-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-value-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .admin-log-row.is-alert {
+        padding: 10px;
+    }
 }
 
 .hero-badge {

@@ -2137,10 +2137,32 @@ def admin_portal():
     total_users = User.query.filter_by(is_archived=False, is_active=True).count()
     total_scans = Scan.query.count()
     users = User.query.filter_by(is_archived=False, is_active=True).order_by(User.id.desc()).limit(6).all()
+    now = datetime.utcnow()
     logs = [
-        {"icon": "server-outline", "title": "Database Backup", "meta": "Completed 1 hour ago", "status": "Success", "color": "#2E7D32"},
-        {"icon": "warning-outline", "title": "Failed Login Attempt", "meta": "IP: 192.168.1.45 | 2 hrs ago", "status": "Alert", "color": "#C62828"},
-        {"icon": "person-add-outline", "title": "New User Registration", "meta": "Maria Santos | 4 hrs ago", "status": "Review", "color": "#1565C0"},
+        {
+            "icon": "server-outline",
+            "title": "Database Backup",
+            "meta": "Nightly recovery snapshot completed successfully.",
+            "status": "Success",
+            "color": "#2E7D32",
+            "timestamp": now - timedelta(hours=1, minutes=12),
+        },
+        {
+            "icon": "warning-outline",
+            "title": "Failed Login Attempt",
+            "meta": "IP: 192.168.1.45 exceeded retry threshold.",
+            "status": "Alert",
+            "color": "#C62828",
+            "timestamp": now - timedelta(hours=2, minutes=4),
+        },
+        {
+            "icon": "person-add-outline",
+            "title": "New User Registration",
+            "meta": "Maria Santos is awaiting farmer account review.",
+            "status": "Review",
+            "color": "#1565C0",
+            "timestamp": now - timedelta(hours=4, minutes=18),
+        },
     ]
     model_accuracy = 98.6
     storage_utilization = 68
@@ -2156,13 +2178,38 @@ def admin_portal():
         "model_accuracy": model_accuracy,
         "storage_utilization": storage_utilization,
     }
+
+    metric_trends = {
+        "active_users": "+12% from last week" if total_users else "Waiting for first users",
+        "total_scans": "+18% from last week" if total_scans else "Waiting for first scan",
+        "model_accuracy": "+0.6 pts vs last validation",
+        "storage_utilization": "Steady vs last week" if storage_utilization < 70 else "+6% from last week",
+    }
+
+    for log in logs:
+        timestamp = log.get("timestamp")
+        if not timestamp:
+            continue
+        elapsed = now - timestamp
+        total_minutes = max(1, int(elapsed.total_seconds() // 60))
+        if total_minutes < 60:
+            relative = f"{total_minutes}m ago"
+        else:
+            total_hours = total_minutes // 60
+            if total_hours < 24:
+                relative = f"{total_hours}h ago"
+            else:
+                relative = f"{total_hours // 24}d ago"
+        log["relative_time"] = relative
+        log["exact_time"] = timestamp.strftime("%b %d, %Y %I:%M %p UTC")
     return render_template(
         'admin.html',
         total_users=total_users,
         users=users,
         logs=logs,
         current_admin=current_admin,
-        stats=stats
+        stats=stats,
+        metric_trends=metric_trends,
     )
 
 @app.route('/admin/farmers', methods=['GET', 'POST'])

@@ -9,20 +9,78 @@
     <style>
         .stats-grid.stats-grid-inputs {
             display: grid !important;
-            grid-template-columns: repeat(2, minmax(320px, 1fr)) !important;
+            grid-template-columns: repeat(2, minmax(280px, 1fr)) !important;
             align-items: start;
-            column-gap: 18px;
-            row-gap: 18px;
+            column-gap: 14px;
+            row-gap: 14px;
             width: 100%;
             grid-auto-flow: row dense;
-            --variety-helper-space: 28px;
+            --variety-helper-space: 18px;
         }
 
         .stats-grid.stats-grid-inputs > .stat-card {
             min-width: 0;
             width: 100%;
-            padding: 16px 16px 18px;
+            padding: 14px 14px 16px;
             grid-column: span 1 !important;
+        }
+
+        .assessment-panel {
+            margin-bottom: 18px;
+            border: 1px solid rgba(47, 106, 51, 0.12);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 252, 247, 0.96) 100%);
+        }
+
+        .assessment-panel-header {
+            margin-bottom: 18px;
+            align-items: flex-start;
+        }
+
+        .assessment-grid {
+            margin-bottom: 0;
+        }
+
+        .assessment-grid .stat-card-variety,
+        .assessment-grid .stat-card-tons {
+            grid-column: 1 / -1 !important;
+        }
+
+        .stat-card-tons {
+            width: calc(100% + 12px);
+            margin-left: -6px;
+            padding: 18px 10px 18px !important;
+            border-radius: 22px;
+        }
+
+        .stat-card-tons .stat-label {
+            margin-bottom: 12px;
+        }
+
+        .stat-card-tons .stat-inline {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .stat-card-tons .stat-select {
+            margin-top: 0;
+            min-height: 54px;
+            padding: 0 48px 0 16px;
+            border-radius: 18px;
+            font-size: 1rem;
+            background-position: right 16px center;
+            background-size: 16px;
+        }
+
+        .stat-card-tons .stat-action {
+            width: 100%;
+            min-height: 50px;
+            margin-top: 0;
+            border-radius: 18px;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 800;
         }
 
         .stat-card-variety {
@@ -34,14 +92,14 @@
         .variety-trigger {
             position: relative;
             width: 100%;
-            min-height: 108px;
+            min-height: 94px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-top: 14px;
-            padding: 14px;
+            margin-top: 10px;
+            padding: 12px 14px;
             border: 1px solid var(--neutral-200);
-            border-radius: 24px;
+            border-radius: 20px;
             background: linear-gradient(180deg, #ffffff 0%, #f7fbf6 100%);
             color: var(--neutral-900);
             text-align: center;
@@ -152,7 +210,8 @@
 
         .variety-trigger.is-selected .variety-trigger-value {
             font-size: clamp(0.74rem, 1vw, 0.86rem);
-            color: #5f6f61;
+            color: #1d2a1e;
+            font-weight: 600;
         }
 
         .variety-trigger-icon {
@@ -355,7 +414,7 @@
             position: relative;
             overflow: visible;
             z-index: 2;
-            padding-bottom: calc(18px + var(--variety-helper-space));
+            padding-bottom: 16px;
         }
 
         .ag-selector-card.is-panel-open {
@@ -365,14 +424,14 @@
         .selector-trigger {
             position: relative;
             width: 100%;
-            min-height: 108px;
+            min-height: 94px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-top: 14px;
-            padding: 14px;
+            margin-top: 10px;
+            padding: 12px 14px;
             border: 1px solid var(--neutral-200);
-            border-radius: 24px;
+            border-radius: 20px;
             background: linear-gradient(180deg, #ffffff 0%, #f7fbf6 100%);
             color: var(--neutral-900);
             text-align: center;
@@ -429,6 +488,11 @@
             font-size: clamp(0.95rem, 1.4vw, 1.1rem);
             font-weight: 700;
             letter-spacing: 0.01em;
+        }
+
+        .selector-trigger.is-selected .selector-trigger-value {
+            color: #1d2a1e;
+            font-weight: 600;
         }
 
         .selector-trigger-value {
@@ -552,16 +616,12 @@
             }
 
             .selector-trigger {
-                min-height: 108px;
+                min-height: 92px;
             }
 
             .selector-option {
                 min-height: 68px;
             }
-        }
-
-        .stats-grid.stats-grid-inputs .stat-card-tons {
-            grid-column: 1 / -1 !important;
         }
 
         .camera-upload-status {
@@ -644,9 +704,42 @@
         .dashboard-container > .panel + .panel {
             margin-top: 20px;
         }
+
+        .hero-actions {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+            gap: 12px;
+        }
+
+        .hero-actions .btn {
+            justify-content: center;
+            min-height: 56px;
+            border-radius: 18px;
+            font-weight: 700;
+        }
+
+        .hero-actions .btn.primary {
+            background: linear-gradient(135deg, #123a7a 0%, #2057b5 100%);
+            box-shadow: 0 16px 32px rgba(18, 58, 122, 0.28);
+        }
+
+        .hero-actions .btn.primary:hover {
+            box-shadow: 0 20px 38px rgba(18, 58, 122, 0.34);
+        }
+
+        .hero-actions .btn.ghost {
+            background: linear-gradient(180deg, #1d4f2a 0%, #2f6a33 100%);
+            color: #f8fff5;
+            border: 1px solid rgba(47, 106, 51, 0.34);
+            box-shadow: 0 12px 28px rgba(27, 79, 42, 0.22);
+        }
+
+        .hero-actions .btn.ghost:hover {
+            background: linear-gradient(180deg, #184522 0%, #295d2d 100%);
+        }
         @media (max-width: 840px) {
             .ag-selector-card {
-                padding-bottom: calc(16px + var(--variety-helper-space));
+                padding-bottom: 14px;
             }
         }
 
@@ -732,6 +825,7 @@
                 padding: 12px 10px;
                 font-size: 13px;
                 border-radius: 14px;
+                min-height: 50px;
             }
 
             .stats-grid.stats-grid-inputs {
@@ -748,6 +842,23 @@
                 min-width: 0;
                 display: flex;
                 flex-direction: column;
+            }
+
+            .assessment-panel {
+                padding: 14px;
+                border-radius: 18px;
+            }
+
+            .stat-card-tons {
+                width: calc(100% + 8px);
+                margin-left: -4px;
+                padding: 16px 10px !important;
+            }
+
+            .stat-card-tons .stat-select,
+            .stat-card-tons .stat-action {
+                min-height: 46px;
+                border-radius: 16px;
             }
 
             .ag-selector-card {
@@ -1198,10 +1309,41 @@
             font-size: 12px;
             gap: 6px;
             border-radius: 16px;
+            color: rgba(17, 36, 77, 0.74);
         }
 
         .farmer-bottom-link ion-icon {
             font-size: 23px;
+        }
+
+        .farmer-bottom-link span {
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
+        .farmer-bottom-link.is-active {
+            background: linear-gradient(180deg, rgba(30, 91, 191, 0.16) 0%, rgba(30, 91, 191, 0.24) 100%);
+            color: #123a7a;
+            box-shadow: inset 0 0 0 1px rgba(30, 91, 191, 0.16);
+        }
+
+        .farmer-bottom-link.is-active ion-icon {
+            color: #123a7a;
+            transform: scale(1.08);
+        }
+
+        .stat-select {
+            color: #1f2a22;
+            font-weight: 600;
+        }
+
+        .stat-select:required:invalid {
+            color: #7f8f84;
+            font-weight: 500;
+        }
+
+        .stat-select option {
+            color: #1f2a22;
         }
 
         @media (max-width: 768px) {
@@ -1307,7 +1449,16 @@
             </div>
         </section>
 
-        <form id="calc-form" class="stats-grid stats-grid-inputs" action="{{ url_for('calculate_results') }}" method="post">
+        <section class="panel assessment-panel">
+            <div class="panel-header assessment-panel-header">
+                <div>
+                    <h3 class="panel-title">Assessment Parameters</h3>
+                    <p class="panel-subtitle">Choose your agronomic inputs, then calculate your expected result.</p>
+                </div>
+                <span class="badge"><ion-icon name="leaf-outline"></ion-icon>Agronomic Data</span>
+            </div>
+
+        <form id="calc-form" class="stats-grid stats-grid-inputs assessment-grid" action="{{ url_for('calculate_results') }}" method="post">
             <div class="stat-card stat-card-variety">
                 <div class="stat-label">Variety</div>
                 <input type="hidden" name="variety" id="variety-input" required>
@@ -1470,6 +1621,7 @@
                 <div class="stat-helper" id="tons-calc-result" aria-live="polite"></div>
             </div>
         </form>
+        </section>
 
         <section class="section-grid two-col">
             <div class="panel">
