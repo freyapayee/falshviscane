@@ -674,6 +674,46 @@ body.admin-layout {
     color: rgba(17, 36, 77, 0.9);
 }
 
+.superadmin-layout .stat-input {
+    color: #1f2a22 !important;
+}
+
+.superadmin-layout .stat-input::placeholder {
+    color: rgba(31, 42, 34, 0.58) !important;
+}
+
+.superadmin-layout .stat-input option {
+    color: #1f2a22;
+    background: #ffffff;
+}
+
+.superadmin-cv-gallery-panel {
+    margin-top: 18px;
+}
+
+.superadmin-scan-gallery-grid {
+    max-height: none;
+    overflow: visible;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    padding-right: 0;
+}
+
+.superadmin-scan-gallery-item {
+    border-radius: 14px;
+}
+
+.superadmin-scan-gallery-item img {
+    height: 170px;
+    object-fit: cover;
+}
+
+.superadmin-scan-gallery-item figcaption {
+    font-size: 11px;
+    line-height: 1.35;
+    color: #4a5750;
+}
+
 .scanner-layout {
     margin: 0;
     min-height: 100svh;

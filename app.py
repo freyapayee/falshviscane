@@ -2452,6 +2452,7 @@ def superadmin_login():
     if not Admin.query.filter_by(is_archived=False).first():
         return redirect(url_for('admin_setup'))
     error = None
+    success = request.args.get('success')
     if request.method == 'POST':
         identifier = request.form.get('identifier', '').strip().lower()
         password = request.form.get('password', '')
@@ -2466,7 +2467,7 @@ def superadmin_login():
                 return redirect(url_for('superadmin_portal'))
         else:
             error = 'Invalid superadmin credentials. Please try again.'
-    return render_template('superadmin_login.html', error=error)
+    return render_template('superadmin_login.html', error=error, success=success)
 
 @app.route('/admin-setup', methods=['GET', 'POST'])
 def admin_setup():
@@ -2535,6 +2536,40 @@ def admin_register():
 
     return render_template('admin_register.html', error=error)
 
+@app.route('/superadmin-register', methods=['GET', 'POST'])
+def superadmin_register():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not username or not email or not password or not confirm_password:
+            error = 'Please complete all registration fields.'
+        elif password != confirm_password:
+            error = 'Passwords do not match.'
+        elif len(password) < 8:
+            error = 'Password must be at least 8 characters.'
+        elif Admin.query.filter(Admin.username.ilike(username)).first():
+            error = 'Username is already taken.'
+        elif Admin.query.filter(Admin.email.ilike(email)).first():
+            error = 'Email is already registered.'
+        else:
+            admin = Admin(
+                username=username,
+                email=email,
+                password_hash=generate_password_hash(password),
+                role='superadmin',
+                is_archived=False,
+            )
+            db.session.add(admin)
+            db.session.commit()
+            log_audit(f"Superadmin account registered: {username}")
+            return redirect(url_for('superadmin_login', success='Superadmin account created successfully.'))
+
+    return render_template('superadmin_register.html', error=error)
+
 @app.route('/admin-reset', methods=['GET', 'POST'])
 def admin_reset():
     error = None
@@ -2589,6 +2624,7 @@ def superadmin_portal():
     deactivated_users = User.query.filter_by(is_archived=False, is_active=False).order_by(User.id.desc()).all()
     recent_scans = Scan.query.filter(Scan.user_id.in_(active_user_ids)).order_by(Scan.created_at.desc()).limit(6).all()
     recent_predictions = AgronomicLog.query.order_by(AgronomicLog.created_at.desc()).limit(6).all()
+    superadmin_cv_uploads = CvScanUpload.query.order_by(CvScanUpload.created_at.desc()).all()
     return render_template(
         'superadmin.html',
         total_users=total_users,
@@ -2606,6 +2642,7 @@ def superadmin_portal():
         deactivated_users=deactivated_users,
         recent_scans=recent_scans,
         recent_predictions=recent_predictions,
+        superadmin_cv_uploads=superadmin_cv_uploads,
         create_error=create_error,
         create_success=create_success,
         current_admin=get_current_admin()
