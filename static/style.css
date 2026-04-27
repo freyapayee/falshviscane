@@ -932,11 +932,97 @@ body.admin-layout .dashboard-bg {
     opacity: 0.85;
 }
 
+body.farmer-layout .brand-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+body.farmer-layout .brand-system {
+    margin: 0;
+    font-size: 1.08rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+body.farmer-layout .brand-title {
+    font-size: 2rem;
+    line-height: 1.08;
+}
+
+body.farmer-layout .brand-subtitle {
+    font-size: 1.08rem;
+    opacity: 0.92;
+}
+
 .header-actions {
     display: flex;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+}
+
+body.farmer-layout .header-actions {
+    width: min(560px, 50%);
+    margin-left: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+}
+
+.farmer-info-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    color: #ffffff;
+    font-size: 12px;
+    line-height: 1.2;
+    max-width: 100%;
+}
+
+body.farmer-layout .header-actions .farmer-info-chip {
+    min-height: 52px;
+    font-size: 1.02rem;
+    font-weight: 700;
+    border-radius: 14px;
+    padding: 11px 14px;
+}
+
+body.farmer-layout .header-actions .farmer-info-chip ion-icon {
+    font-size: 20px;
+}
+
+body.farmer-layout .header-actions .btn.light {
+    min-height: 52px;
+    border-radius: 14px;
+    padding: 10px 16px;
+    font-size: 1rem;
+    font-weight: 700;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+body.farmer-layout .header-actions .btn.light ion-icon {
+    font-size: 20px;
+}
+
+.farmer-info-chip ion-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.farmer-info-chip span {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .status-pill {
@@ -967,10 +1053,11 @@ body.camera-open {
     inset: 0;
     background: rgba(10, 12, 10, 0.92);
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    z-index: 50;
-    padding: 18px;
+    z-index: 1300;
+    overflow-y: auto;
+    padding: 12px 14px 22px;
 }
 
 .camera-overlay.is-active {
@@ -983,6 +1070,13 @@ body.camera-open {
     flex-direction: column;
     gap: 16px;
     color: var(--neutral-0);
+    margin: 0 auto;
+    min-height: calc(100svh - 24px);
+    padding-bottom: 14px;
+}
+
+body.camera-open .farmer-bottom-nav {
+    display: none;
 }
 
 .camera-header {
@@ -1559,6 +1653,7 @@ body.admin-layout .btn.primary {
 .list-meta {
     font-size: 12px;
     color: var(--neutral-500);
+    overflow-wrap: anywhere;
 }
 
 .list-status {
@@ -2021,6 +2116,13 @@ body.modal-open {
     font-size: 20px;
 }
 
+.farmer-bottom-link span {
+    display: block;
+    line-height: 1.15;
+    min-height: 2.3em;
+    overflow-wrap: anywhere;
+}
+
 .farmer-bottom-link.is-active {
     background: var(--accent-soft);
     color: var(--accent-strong);
@@ -2153,10 +2255,16 @@ body.modal-open {
     .farmer-bottom-link {
         min-height: 57px;
         font-size: 10px;
+        gap: 4px;
     }
 
     .farmer-bottom-link ion-icon {
         font-size: 18px;
+    }
+
+    .farmer-bottom-link span {
+        min-height: 2.2em;
+        font-size: 9.5px;
     }
 }
 
@@ -2296,9 +2404,115 @@ body.modal-open {
 }
 
 @media (max-width: 720px) {
-    .dashboard-container {
+    body.farmer-layout .dashboard-container {
         margin-top: -58px;
         padding-bottom: 40px;
+    }
+
+    body.farmer-layout .header-content {
+        padding: 0 14px;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    body.farmer-layout .brand {
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    body.farmer-layout .brand-title {
+        font-size: 1.62rem;
+        line-height: 1.1;
+        overflow-wrap: anywhere;
+    }
+
+    body.farmer-layout .brand-system {
+        font-size: 0.92rem;
+    }
+
+    body.farmer-layout .brand-subtitle {
+        font-size: 0.92rem;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    body.farmer-layout .header-actions {
+        width: 100%;
+        gap: 10px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        justify-content: stretch;
+    }
+
+    body.farmer-layout .header-actions .btn.light {
+        min-height: 48px;
+        font-size: 0.95rem;
+        padding: 8px 13px;
+        border-radius: 12px;
+    }
+
+    body.farmer-layout .farmer-info-chip {
+        font-size: 0.93rem;
+        padding: 9px 11px;
+    }
+
+    body.farmer-layout .panel {
+        padding: 16px;
+    }
+
+    body.farmer-layout .panel-header {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    body.farmer-layout .panel-title {
+        font-size: 15px;
+        line-height: 1.2;
+    }
+
+    body.farmer-layout .panel-subtitle {
+        font-size: 12px;
+        line-height: 1.25;
+    }
+
+    body.farmer-layout .list-row {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 8px;
+        padding: 10px 0;
+    }
+
+    body.farmer-layout .list-row .list-badge {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        font-size: 18px;
+    }
+
+    body.farmer-layout .list-row h4 {
+        font-size: 14px;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    body.farmer-layout .list-row .tag {
+        align-self: start;
+        justify-self: end;
+        margin-top: 2px;
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+
+    body.farmer-layout .result-row {
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    body.farmer-layout .result-value {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        text-align: right;
     }
 
     .hero-panel {
@@ -2322,6 +2536,41 @@ body.modal-open {
 }
 
 @media (max-width: 520px) {
+    body.farmer-layout .dashboard-header {
+        padding: 16px 0 78px;
+        border-radius: 0 0 28px 28px;
+    }
+
+    body.farmer-layout .brand-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+    }
+
+    body.farmer-layout .header-actions .btn.light {
+        font-size: 0.86rem;
+        padding: 8px 11px;
+        min-height: 44px;
+    }
+
+    body.farmer-layout .farmer-info-chip {
+        width: auto;
+        justify-content: flex-start;
+        text-align: left;
+        min-height: 44px;
+        font-size: 0.86rem;
+    }
+
+    body.farmer-layout .badge {
+        font-size: 10px;
+        padding: 5px 8px;
+    }
+
+    body.farmer-layout .result-label {
+        font-size: 10px;
+        letter-spacing: 0.8px;
+    }
+
     .results-card {
         padding: 20px;
     }
@@ -2332,11 +2581,12 @@ body.modal-open {
     }
 
     .result-value {
-        font-size: 16px;
+        font-size: 15px;
+        text-align: left;
     }
 
     .result-highlight .result-value {
-        font-size: 22px;
+        font-size: 20px;
     }
 
     .mobile-actions {

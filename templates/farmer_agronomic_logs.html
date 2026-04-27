@@ -16,12 +16,17 @@
                 <div class="brand-icon">
                     <img src="{{ url_for('static', filename='logo.jpg') }}" alt="VISCANE Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
                 </div>
-                <div>
+                <div class="brand-copy">
+                    <p class="brand-system">VISCANE</p>
                     <p class="brand-title">Agronomic Input Logs</p>
                     <p class="brand-subtitle">Saved inputs and prediction history</p>
                 </div>
             </div>
             <div class="header-actions">
+                <div class="farmer-info-chip" aria-live="polite">
+                    <ion-icon name="partly-sunny-outline"></ion-icon>
+                    <span data-farmer-info-text>Loading date...</span>
+                </div>
                 <a class="btn light" href="/homepage">
                     <ion-icon name="home-outline"></ion-icon>
                     Home
@@ -48,13 +53,13 @@
                                 {{ log.variety or 'Unknown Variety' }} | {{ log.created_at.strftime('%b %d, %I:%M %p') if log.created_at else 'Date unavailable' }}
                             </h4>
                             <div class="list-meta" style="margin-top: 6px;">
-                                Inputs: Plowing {{ log.plowing_count or '-' }}, Weeding {{ log.weeding_count or '-' }}, Fertilizer {{ log.fertilizer_count or '-' }}, Ratoon {{ log.ratoon_stage or '-' }}, RSSI {{ log.rssi_infected or '-' }}, Hectares {{ log.hectares or '-' }}
+                                <strong>Inputs:</strong> Plowing {{ log.plowing_count or '-' }}, Weeding {{ log.weeding_count or '-' }}, Fertilizer {{ log.fertilizer_count or '-' }}, Ratoon {{ log.ratoon_stage or '-' }}, RSSI {{ log.rssi_infected or '-' }}, Hectares {{ log.hectares or '-' }}
                             </div>
                             <div class="list-meta" style="margin-top: 6px;">
-                                Prediction: LKG/TC {{ '%.2f'|format(log.predicted_lkg_tc) if log.predicted_lkg_tc is not none else 'Pending' }}, TC/HA {{ '%.2f'|format(log.predicted_tc_ha) if log.predicted_tc_ha is not none else 'Pending' }}, LKG {{ '%.2f'|format(log.predicted_lkg) if log.predicted_lkg is not none else 'Pending' }}
+                                <strong>Prediction:</strong> LKG/TC {{ '%.2f'|format(log.predicted_lkg_tc) if log.predicted_lkg_tc is not none else 'Pending' }}, TC/HA {{ '%.2f'|format(log.predicted_tc_ha) if log.predicted_tc_ha is not none else 'Pending' }}, LKG {{ '%.2f'|format(log.predicted_lkg) if log.predicted_lkg is not none else 'Pending' }}
                             </div>
                             <div class="list-meta" style="margin-top: 6px;">
-                                Recommendations: {{ log.recommendations_summary or 'No recommendation generated.' }}
+                                <strong>Recommendations:</strong> {{ log.recommendations_summary or 'No recommendation generated.' }}
                             </div>
                         </div>
                     </div>
@@ -78,12 +83,13 @@
         </a>
         <a class="farmer-bottom-link is-active" href="/farmer/agronomic-logs">
             <ion-icon name="document-text-outline"></ion-icon>
-            <span>Agronomic Input Logs</span>
+            <span>Input Logs</span>
         </a>
         <a class="farmer-bottom-link" href="/farmer/settings">
             <ion-icon name="person-outline"></ion-icon>
             <span>Profile</span>
         </a>
     </nav>
+    <script src="{{ url_for('static', filename='farmer_ui.js') }}"></script>
 </body>
 </html>
