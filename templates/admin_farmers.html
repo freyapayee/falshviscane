@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>VISCANE | Farmer Account Management</title>
 </head>
-<body class="admin-layout">
+<body class="admin-layout admin-farmers-page">
     <div class="dashboard-bg"></div>
 
     <header class="dashboard-header">
@@ -127,11 +127,11 @@
                     <span class="badge"><ion-icon name="people-outline"></ion-icon>{{ users|length }} farmers</span>
                 </div>
                 <form class="admin-search-row" method="GET" action="/admin/farmers">
-                    <input class="stat-input" type="text" name="search" placeholder="Search by name, email, phone, or address" value="{{ search or '' }}">
                     <button class="btn primary" type="submit">
                         <ion-icon name="search-outline"></ion-icon>
                         Search
                     </button>
+                    <input class="stat-input" type="text" name="search" placeholder="Search by name, email, phone, or address" value="{{ search or '' }}">
                 </form>
                 <table class="data-table">
                     <thead>

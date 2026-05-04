@@ -43,63 +43,75 @@
     </header>
 
     <main class="dashboard-container fade-in">
-        <section class="stats-grid">
-            <div class="stat-card accent-blue">
+        <section class="stats-grid admin-metrics-grid">
+            <div class="stat-card accent-blue admin-metric-card">
                 <div class="stat-label">Total Users</div>
-                <div class="stat-value">{{ stats.active_users | default('0') }}</div>
-                <div class="stat-meta">Registered farmers</div>
+                <div class="stat-value-row">
+                    <div class="stat-value">{{ stats.active_users | default('0') }}</div>
+                    <div class="stat-trend">{{ metric_trends.active_users }}</div>
+                </div>
+                <div class="stat-meta">{{ 'Registered farmers' if (stats.active_users | default('0') | int) else 'No data to display yet' }}</div>
             </div>
-            <div class="stat-card accent-green">
+            <div class="stat-card accent-green admin-metric-card">
                 <div class="stat-label">Total Scans</div>
-                <div class="stat-value">{{ stats.total_scans | default('0') }}</div>
-                <div class="stat-meta">All-time submissions</div>
+                <div class="stat-value-row">
+                    <div class="stat-value">{{ stats.total_scans | default('0') }}</div>
+                    <div class="stat-trend">{{ metric_trends.total_scans }}</div>
+                </div>
+                <div class="stat-meta">{{ 'All-time submissions' if (stats.total_scans | default('0') | int) else 'Waiting for first scan...' }}</div>
             </div>
-            <div class="stat-card accent-purple">
+            <div class="stat-card accent-purple admin-metric-card">
                 <div class="stat-label">Accuracy</div>
-                <div class="stat-value">{{ stats.model_accuracy | default('98.6') }}%</div>
+                <div class="stat-value-row">
+                    <div class="stat-value">{{ stats.model_accuracy | default('98.6') }}%</div>
+                    <div class="stat-trend">{{ metric_trends.model_accuracy }}</div>
+                </div>
                 <div class="stat-meta">Validated Feb 4</div>
             </div>
-            <div class="stat-card accent-orange storage-card {{ 'is-critical' if (stats.storage_utilization | default('68') | float) > 90 else '' }}" {% if (stats.storage_utilization | default('68') | float) > 90 %}title="Disk space is running low. Please archive old scans."{% endif %}>
+            <div class="stat-card accent-orange storage-card admin-metric-card {{ 'is-critical' if (stats.storage_utilization | default('68') | float) > 90 else '' }}" {% if (stats.storage_utilization | default('68') | float) > 90 %}title="Disk space is running low. Please archive old scans."{% endif %}>
                 <div class="stat-label">Storage</div>
-                <div class="stat-value {{ 'text-danger' if (stats.storage_utilization | default('68') | float) > 90 else '' }}">
-                    {{ stats.storage_utilization | default('68') }}%
-                    {% if (stats.storage_utilization | default('68') | float) > 90 %}
-                        <span class="stat-warning-icon" aria-hidden="true">&#9888;</span>
-                    {% endif %}
+                <div class="stat-value-row">
+                    <div class="stat-value {{ 'text-danger' if (stats.storage_utilization | default('68') | float) > 90 else '' }}">
+                        {{ stats.storage_utilization | default('68') }}%
+                        {% if (stats.storage_utilization | default('68') | float) > 90 %}
+                            <span class="stat-warning-icon" aria-hidden="true">&#9888;</span>
+                        {% endif %}
+                    </div>
+                    <div class="stat-trend">{{ metric_trends.storage_utilization }}</div>
                 </div>
                 <div class="stat-meta">Disk utilization</div>
             </div>
         </section>
 
-        <section class="panel">
+        <section class="panel admin-module-panel">
             <div class="panel-header">
                 <div>
                     <h3 class="panel-title">Admin Modules</h3>
                     <p class="panel-subtitle">Operations and farmer support tools</p>
                 </div>
             </div>
-            <div class="action-grid admin-tools">
-                <a class="action-tile" href="/admin/farmers">
+            <div class="action-grid admin-grid admin-modules-grid">
+                <a class="action-tile admin-module-tile" href="/admin/farmers">
                     <ion-icon name="people-outline"></ion-icon>
                     <div>Farmer Accounts</div>
                 </a>
-                <a class="action-tile" href="/superadmin-login">
+                <a class="action-tile admin-module-tile" href="/superadmin-login">
                     <ion-icon name="person-add-outline"></ion-icon>
                     <div>Admin Registration</div>
                 </a>
-                <a class="action-tile" href="/admin/monitoring">
+                <a class="action-tile admin-module-tile" href="/admin/monitoring">
                     <ion-icon name="analytics-outline"></ion-icon>
                     <div>Data Monitoring</div>
                 </a>
-                <a class="action-tile" href="/admin/models">
+                <a class="action-tile admin-module-tile" href="/admin/models">
                     <ion-icon name="cloud-upload-outline"></ion-icon>
                     <div>Model Updates</div>
                 </a>
-                <a class="action-tile" href="/admin/reports">
+                <a class="action-tile admin-module-tile" href="/admin/reports">
                     <ion-icon name="bar-chart-outline"></ion-icon>
                     <div>Scoped Reports</div>
                 </a>
-                <a class="action-tile" href="/admin/communications">
+                <a class="action-tile admin-module-tile" href="/admin/communications">
                     <ion-icon name="chatbox-ellipses-outline"></ion-icon>
                     <div>Comms & Support</div>
                 </a>
@@ -107,7 +119,7 @@
         </section>
 
         <section class="section-grid two-col">
-            <div class="panel">
+            <div class="panel admin-logs-panel">
                 <div class="panel-header">
                     <div>
                         <h3 class="panel-title">System Logs</h3>
@@ -116,14 +128,15 @@
                     <span class="badge"><ion-icon name="time-outline"></ion-icon>Updated 5 min ago</span>
                 </div>
                 {% for log in logs %}
-                    <div class="list-row">
-                        <div class="list-badge" style="background: #E3F2FD; color: #1565C0;">
+                    <div class="list-row admin-log-row {{ 'is-alert' if log.status == 'Alert' else '' }}">
+                        <div class="list-badge admin-log-badge {{ 'is-alert' if log.status == 'Alert' else '' }}">
                             <ion-icon name="{{ log.icon }}"></ion-icon>
                         </div>
-                        <div class="list-main" style="flex: 1;">
+                        <div class="list-main admin-log-main">
                             <h4>{{ log.title }}</h4>
                             <div class="list-meta">{{ log.meta }}</div>
                         </div>
+                        <div class="admin-log-time" title="{{ log.exact_time }}">{{ log.relative_time }}</div>
                         {% if log.status == 'Review' %}
                             <a class="tag" href="/admin/farmers" style="text-decoration: none;">{{ log.status }}</a>
                         {% else %}
@@ -146,7 +159,7 @@
                     <div style="flex: 1;">
                         <div class="list-meta">Model accuracy</div>
                         <strong>{{ stats.model_accuracy | default('98.6') }}%</strong>
-                        <div class="progress"><span style="width: 98%;"></span></div>
+                        <div class="progress health-good"><span style="width: 98%;"></span></div>
                     </div>
                 </div>
                 <div class="list-row">
@@ -154,7 +167,7 @@
                     <div style="flex: 1;">
                         <div class="list-meta">Training data freshness</div>
                         <strong>92%</strong>
-                        <div class="progress"><span style="width: 92%;"></span></div>
+                        <div class="progress health-good"><span style="width: 92%;"></span></div>
                     </div>
                 </div>
                 <div class="list-row">
@@ -162,7 +175,7 @@
                     <div style="flex: 1;">
                         <div class="list-meta">Storage utilization</div>
                         <strong>{{ stats.storage_utilization | default('68') }}%</strong>
-                        <div class="progress"><span style="width: 68%;"></span></div>
+                        <div class="progress {{ 'health-good' if (stats.storage_utilization | default('68') | float) >= 90 else 'health-warning' if (stats.storage_utilization | default('68') | float) >= 70 else 'health-critical' }}"><span style="width: {{ stats.storage_utilization | default('68') }}%;"></span></div>
                     </div>
                 </div>
             </div>
@@ -174,8 +187,12 @@
                     <h3 class="panel-title">User Management</h3>
                     <p class="panel-subtitle">Role access and monitoring</p>
                 </div>
+                <button class="btn ghost admin-table-filter" type="button">
+                    <ion-icon name="search-outline"></ion-icon>
+                    Filter
+                </button>
             </div>
-            <table class="data-table">
+            <table class="data-table admin-user-table">
                 <thead>
                     <tr>
                         <th>User</th>
@@ -198,34 +215,34 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="5">No users registered yet.</td>
+                            <td colspan="5">No users registered yet. Waiting for the first farmer account to appear.</td>
                         </tr>
                     {% endif %}
                 </tbody>
             </table>
         </section>
 
-        <section class="panel">
+        <section class="panel admin-tools-panel">
             <div class="panel-header">
                 <div>
                     <h3 class="panel-title">Admin Tools</h3>
                     <p class="panel-subtitle">Quick access to system operations</p>
                 </div>
             </div>
-            <div class="action-grid">
-                <a class="action-tile" href="/superadmin-login">
+            <div class="action-grid admin-grid admin-tools-grid">
+                <a class="action-tile admin-tool-tile" href="/superadmin-login">
                     <ion-icon name="people-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
                     <div>Manage Users</div>
                 </a>
-                <div class="action-tile">
+                <div class="action-tile admin-tool-tile">
                     <ion-icon name="settings-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
                     <div>System Settings</div>
                 </div>
-                <div class="action-tile">
+                <div class="action-tile admin-tool-tile">
                     <ion-icon name="document-text-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
                     <div>Audit Reports</div>
                 </div>
-                <div class="action-tile">
+                <div class="action-tile admin-tool-tile">
                     <ion-icon name="shield-checkmark-outline" style="font-size: 22px; color: var(--accent);"></ion-icon>
                     <div>Access Control</div>
                 </div>
