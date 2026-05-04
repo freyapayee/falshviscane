@@ -177,6 +177,37 @@
             </div>
         </section>
 
+        <section class="panel superadmin-panel superadmin-cv-gallery-panel">
+            <div class="panel-header">
+                <div>
+                    <h3 class="panel-title">Sugarcane Scan Gallery</h3>
+                    <p class="panel-subtitle">All uploaded stalk photos with detected variety and maturity</p>
+                </div>
+                <span class="badge superadmin-badge">
+                    <ion-icon name="images-outline"></ion-icon>
+                    {{ superadmin_cv_uploads|length }} uploads
+                </span>
+            </div>
+            {% if superadmin_cv_uploads %}
+                <div class="scan-gallery-grid superadmin-scan-gallery-grid">
+                    {% for upload in superadmin_cv_uploads %}
+                        <figure class="scan-gallery-item superadmin-scan-gallery-item">
+                            <img src="{{ url_for('static', filename=upload.image_path) }}" alt="Sugarcane scan upload" loading="lazy">
+                            <figcaption>
+                                <strong>Uploader:</strong> {{ upload.user.fullname if upload.user else ('User #' ~ upload.user_id) }}<br>
+                                <strong>Date:</strong> {{ upload.created_at.strftime('%b %d, %Y %I:%M %p') if upload.created_at else 'Date unavailable' }}<br>
+                                <strong>File:</strong> {{ upload.original_filename or 'image' }}<br>
+                                <strong>Variety:</strong> {{ upload.variety or 'Unknown' }}<br>
+                                <strong>Maturity:</strong> {{ (upload.maturity_status or 'Unknown').replace('_', ' ').title() }}
+                            </figcaption>
+                        </figure>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="list-meta">No sugarcane uploads yet.</div>
+            {% endif %}
+        </section>
+
         <section class="panel superadmin-panel">
             <div class="panel-header">
                 <div>

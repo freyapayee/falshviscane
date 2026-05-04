@@ -20,6 +20,9 @@
         {% if error %}
             <div class="form-error">{{ error }}</div>
         {% endif %}
+        {% if success %}
+            <div class="form-success">{{ success }}</div>
+        {% endif %}
 
         <form class="fade-in" method="POST" action="/superadmin-login">
             <div class="input-wrapper">
@@ -35,6 +38,10 @@
                 Sign In as Superadmin
             </button>
         </form>
+
+        <div class="admin-login-link-row">
+            <a href="/superadmin-register" class="admin-login-link">Superadmin registration</a>
+        </div>
 
         <div style="text-align: center; margin-top: 20px;">
             <a href="/admin" style="color: rgba(255,255,255,0.5); font-size: 12px; text-decoration: none;">&larr; Back to Admin</a>
