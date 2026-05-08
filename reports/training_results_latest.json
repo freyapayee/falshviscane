@@ -9,7 +9,7 @@
   "targets": [
     {
       "target": "predicted_lkg_tc",
-      "label": "Estimated LKG/TC",
+      "label": "Predicted LKG/TC",
       "rows": 7290,
       "mode": "holdout",
       "r2": 0.7032306153486502,
@@ -18,7 +18,7 @@
     },
     {
       "target": "predicted_tc_ha",
-      "label": "Estimated TC/HA",
+      "label": "Predicted TC/HA",
       "rows": 7290,
       "mode": "holdout",
       "r2": 0.5413626542993195,
@@ -27,7 +27,7 @@
     },
     {
       "target": "predicted_lkg",
-      "label": "Estimated LKG",
+      "label": "Predicted LKG",
       "rows": 7290,
       "mode": "holdout",
       "r2": 0.4773346655053179,
@@ -35,5 +35,5 @@
       "accuracy_pct": 47.73346655053179
     }
   ],
-  "generated_at_utc": "2026-04-20 12:07:32"
+  "generated_at_utc": "2026-04-28 09:22:17"
 }

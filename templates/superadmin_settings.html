@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>VISCANE | System Settings</title>
 </head>
-<body class="admin-layout">
+<body class="admin-layout superadmin-layout">
     <div class="dashboard-bg"></div>
 
-    <header class="dashboard-header">
+    <header class="dashboard-header superadmin-header">
         <div class="header-content">
             <div class="brand">
                 <div class="brand-icon">
@@ -39,7 +39,11 @@
     </header>
 
     <main class="dashboard-container fade-in">
-        <form class="panel" method="POST">
+        {% if success %}
+            <div class="form-success">{{ success }}</div>
+        {% endif %}
+
+        <form class="panel superadmin-panel" method="POST" enctype="multipart/form-data">
             <div class="panel-header">
                 <div>
                     <h3 class="panel-title">Global Configuration</h3>
@@ -62,6 +66,19 @@
             <div class="stat-helper">Temporarily suspend farmer access for system updates.</div>
 
             <div class="stat-helper">Last updated: {{ config.updated_at.strftime('%b %d, %Y %I:%M %p') if config.updated_at else 'Never' }}</div>
+
+            <hr style="margin: 18px 0; border: 0; border-top: 1px solid rgba(17, 36, 77, 0.12);">
+
+            <div class="panel-header" style="margin-bottom: 10px;">
+                <div>
+                    <h3 class="panel-title">Model Updates</h3>
+                    <p class="panel-subtitle">Deploy the latest retrained model package</p>
+                </div>
+            </div>
+            <div class="stat-label">Current Model</div>
+            <div class="stat-helper">{{ config.model_filename if config.model_filename else 'No model deployed yet.' }}</div>
+            <input class="stat-input" type="file" name="model_file">
+            <div class="stat-helper">Attach a model file only when you want to publish an update.</div>
         </form>
 
         <div class="footer-link">VISCANE Superadmin | System Settings</div>
