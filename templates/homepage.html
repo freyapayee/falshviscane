@@ -40,6 +40,15 @@
             margin-bottom: 0;
         }
 
+        .feedback-input {
+            min-height: 86px;
+            max-height: 126px;
+        }
+
+        .feedback-panel {
+            margin-bottom: calc(84px + env(safe-area-inset-bottom));
+        }
+
         .assessment-grid .stat-card-variety,
         .assessment-grid .stat-card-tons {
             grid-column: 1 / -1 !important;
@@ -1374,7 +1383,7 @@
         }
 
         .farmer-mobile-shell {
-            padding-bottom: 138px;
+            padding-bottom: calc(170px + env(safe-area-inset-bottom));
         }
 
         .farmer-bottom-nav {
@@ -1475,7 +1484,11 @@
             }
 
             .farmer-mobile-shell {
-                padding-bottom: 146px;
+                padding-bottom: calc(188px + env(safe-area-inset-bottom));
+            }
+
+            .feedback-panel {
+                margin-bottom: calc(96px + env(safe-area-inset-bottom));
             }
         }
 
@@ -1876,49 +1889,33 @@
                 {% endif %}
             </div>
 
-            <div class="panel">
+            <div class="panel scan-gallery-block">
                 <div class="panel-header">
                     <div>
-                        <h3 class="panel-title">Quick Tools</h3>
-                        <p class="panel-subtitle">Farmer productivity center</p>
+                        <h3 class="panel-title">Scan Gallery</h3>
+                        <p class="panel-subtitle">Recent uploaded sugarcane scans</p>
                     </div>
                 </div>
-                <div class="action-grid">
-                    <a class="action-tile" href="/farmer/settings">
-                        <ion-icon name="person-circle-outline"></ion-icon>
-                        <div>Profile</div>
-                    </a>
-                    <a class="action-tile" href="/farmer/recommendations">
-                        <ion-icon name="sparkles-outline"></ion-icon>
-                        <div>Recommendations</div>
-                    </a>
-                    <a class="action-tile" href="/farmer/agronomic-logs">
-                        <ion-icon name="document-text-outline"></ion-icon>
-                        <div>Input Logs</div>
-                    </a>
-                </div>
-                <div class="scan-gallery-block">
-                    <div class="scan-gallery-title">Scan Gallery</div>
-                    {% if recent_cv_uploads %}
-                        <div class="scan-gallery-grid">
-                            {% for upload in recent_cv_uploads %}
-                                <figure class="scan-gallery-item">
-                                    <img src="{{ url_for('static', filename=upload.image_path) }}" alt="Uploaded sugarcane scan" loading="lazy">
-                                    <figcaption>
-                                        <strong>Variety:</strong> {{ upload.variety or 'Unknown' }}<br>
-                                        <strong>Maturity:</strong> {{ (upload.maturity_status or 'Unknown').replace('_', ' ').title() }}
-                                    </figcaption>
-                                </figure>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="list-meta">No uploaded scans yet.</div>
-                    {% endif %}
-                </div>
+                {% if recent_cv_uploads %}
+                    <div class="scan-gallery-grid">
+                        {% for upload in recent_cv_uploads %}
+                            <figure class="scan-gallery-item">
+                                <img src="{{ url_for('static', filename=upload.image_path) }}" alt="Uploaded sugarcane scan" loading="lazy">
+                                <figcaption>
+                                    <strong>Variety:</strong> {{ upload.variety or 'Unknown' }}<br>
+                                    <strong>Maturity:</strong> {{ (upload.maturity_status or 'Unknown').replace('_', ' ').title() }}
+                                </figcaption>
+                            </figure>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="list-meta">No uploaded scans yet.</div>
+                {% endif %}
             </div>
+
         </section>
 
-        <section class="panel">
+        <section class="panel feedback-panel">
             <form method="POST" action="/farmer/feedback">
                 <div class="panel-header">
                     <div>
@@ -1931,7 +1928,7 @@
                     </button>
                 </div>
                 <div class="stat-label">Your Feedback</div>
-                <textarea class="stat-input" name="feedback_message" rows="4" placeholder="Write your feedback here..." required></textarea>
+                <textarea class="stat-input feedback-input" name="feedback_message" rows="3" placeholder="Write your feedback here..." required></textarea>
             </form>
         </section>
 

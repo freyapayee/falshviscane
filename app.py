@@ -1072,6 +1072,53 @@ def generate_recommendations(prediction_response, agronomic_input, missing_field
     fertilizer_guide = FERTILIZER_TIMING_GUIDE.get(selected_variety, FERTILIZER_TIMING_GUIDE["VMC 84-524"])
     weeding_guide = WEEDING_GUIDE.get(selected_variety, WEEDING_GUIDE["VMC 84-524"])
     plowing_guide = PLOWING_GUIDE.get(selected_variety, PLOWING_GUIDE["VMC 84-524"])
+    normalized_cv_maturity = normalize_cv_maturity_status(
+        prediction_response.get("cv_maturity_status")
+        or prediction_response.get("maturity_status")
+    )
+
+    if normalized_cv_maturity == "NOT_MATURE":
+        recommendations.append(
+            {
+                "icon": "pause-circle-outline",
+                "title": "Delay cutting for sucrose accumulation",
+                "meta": (
+                    'Real-time harvest directive: "Not Mature" classification indicates stalks should not be cut yet. '
+                    "Delay harvest to allow optimal sucrose accumulation before scheduling transport."
+                ),
+                "tag": "Advisory",
+                "tag_class": "warning",
+                "category": "Harvest Directives",
+            }
+        )
+    elif normalized_cv_maturity == "MATURE":
+        recommendations.append(
+            {
+                "icon": "checkmark-done-circle-outline",
+                "title": "Finalize immediate harvest logistics",
+                "meta": (
+                    'Real-time harvest directive: "Mature" classification indicates harvest-ready stalks. '
+                    "Proceed with immediate cutting and finalize hauling/transport coordination."
+                ),
+                "tag": "Ready",
+                "tag_class": "success",
+                "category": "Harvest Directives",
+            }
+        )
+    elif normalized_cv_maturity == "OVER_MATURE":
+        recommendations.append(
+            {
+                "icon": "alert-outline",
+                "title": "Expedite harvest to prevent further yield loss",
+                "meta": (
+                    'Real-time harvest directive: "Over Mature" classification requires urgent cutting. '
+                    "Expedite harvest to mitigate further yield degradation caused by sucrose inversion."
+                ),
+                "tag": "Urgent",
+                "tag_class": "warning",
+                "category": "Harvest Directives",
+            }
+        )
 
     if missing_fields:
         recommendations.append(
@@ -1400,6 +1447,7 @@ def group_recommendations_by_category(recommendations):
 
     category_order = [
         "Missing Inputs",
+        "Harvest Directives",
         "Pest and Disease",
         "Fertilizer Guidance",
         "Weeding Guidance",
@@ -2136,6 +2184,19 @@ def admin_portal():
     current_admin = get_current_admin()
     total_users = User.query.filter_by(is_archived=False, is_active=True).count()
     total_scans = Scan.query.count()
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    active_user_ids = db.session.query(User.id).filter(
+        User.is_archived.is_(False),
+        User.is_active.is_(True)
+    ).subquery()
+    active_farmers = db.session.query(Scan.user_id).filter(
+        Scan.created_at >= seven_days_ago,
+        Scan.user_id.in_(active_user_ids)
+    ).distinct().count()
+    pending_scans = Scan.query.filter(
+        Scan.status == 'pending',
+        Scan.user_id.in_(active_user_ids)
+    ).count()
     users = User.query.filter_by(is_archived=False, is_active=True).order_by(User.id.desc()).limit(6).all()
     now = datetime.utcnow()
     logs = [
@@ -2175,14 +2236,16 @@ def admin_portal():
     stats = {
         "active_users": total_users,
         "total_scans": total_scans,
-        "model_accuracy": model_accuracy,
+        "active_farmers": active_farmers,
+        "pending_scans": pending_scans,
         "storage_utilization": storage_utilization,
     }
 
     metric_trends = {
         "active_users": "+12% from last week" if total_users else "Waiting for first users",
         "total_scans": "+18% from last week" if total_scans else "Waiting for first scan",
-        "model_accuracy": "+0.6 pts vs last validation",
+        "active_farmers": "Last 7 days",
+        "pending_scans": "Needs review" if pending_scans else "All clear",
         "storage_utilization": "Steady vs last week" if storage_utilization < 70 else "+6% from last week",
     }
 
@@ -2360,42 +2423,10 @@ def admin_monitoring():
 @app.route('/admin/models', methods=['GET', 'POST'])
 @login_required
 def admin_models():
-    config = get_system_config()
-    message = None
-    error = None
-    training_report = None
-    training_report_files = None
-
-    if request.method == 'POST':
-        model_file = request.files.get('model_file')
-        if model_file and model_file.filename:
-            filename = secure_filename(model_file.filename)
-            target_dir = os.path.join(app.root_path, 'model_updates')
-            os.makedirs(target_dir, exist_ok=True)
-            file_path = os.path.join(target_dir, filename)
-            model_file.save(file_path)
-            config.model_filename = filename
-            db.session.commit()
-            log_audit(f"Model update received: {filename}", user_id=get_current_admin().id if get_current_admin() else None)
-            message = f"Model '{filename}' uploaded successfully."
-        else:
-            error = "Please choose a model file to upload."
-
-    try:
-        training_report = generate_training_report()
-        training_report_files = export_training_report_files(training_report)
-    except Exception as exc:
-        error = f"Could not generate training report: {exc}"
-
-    return render_template(
-        'admin_models.html',
-        config=config,
-        message=message,
-        error=error,
-        training_report=training_report,
-        training_report_files=training_report_files,
-        current_admin=get_current_admin()
-    )
+    current_admin = get_current_admin()
+    if current_admin and current_admin.role == 'superadmin':
+        return redirect(url_for('superadmin_settings'))
+    return redirect(url_for('admin_portal'))
 
 @app.route('/admin/reports')
 @login_required
@@ -2661,6 +2692,8 @@ def superadmin_portal():
     ).distinct().count()
     total_scans = Scan.query.count()
     total_prediction_logs = AgronomicLog.query.count()
+    total_estimated_lkg_value = db.session.query(db.func.coalesce(db.func.sum(AgronomicLog.predicted_lkg), 0.0)).scalar() or 0.0
+    total_estimated_lkg = f"{float(total_estimated_lkg_value):,.2f}"
     pending_scans = Scan.query.filter(
         Scan.status == 'pending',
         Scan.user_id.in_(active_user_ids)
@@ -2682,6 +2715,7 @@ def superadmin_portal():
         active_farmers=active_farmers,
         total_scans=total_scans,
         total_prediction_logs=total_prediction_logs,
+        total_estimated_lkg=total_estimated_lkg,
         pending_scans=pending_scans,
         admins=admins,
         users=users,
@@ -2957,6 +2991,16 @@ def superadmin_settings():
         db.session.commit()
 
     if request.method == 'POST':
+        model_message = None
+        model_file = request.files.get('model_file')
+        if model_file and model_file.filename:
+            filename = secure_filename(model_file.filename)
+            target_dir = os.path.join(app.root_path, 'model_updates')
+            os.makedirs(target_dir, exist_ok=True)
+            file_path = os.path.join(target_dir, filename)
+            model_file.save(file_path)
+            config.model_filename = filename
+            model_message = f"Model '{filename}' uploaded successfully."
         system_name = request.form.get('system_name', '').strip() or config.system_name
         maintenance_mode = True if request.form.get('maintenance_mode') == 'on' else False
         config.system_name = system_name
@@ -2965,9 +3009,18 @@ def superadmin_settings():
         current_admin = get_current_admin()
         if current_admin:
             log_audit("System settings updated", user_id=current_admin.id)
+            if model_message:
+                log_audit(f"Model update received: {config.model_filename}", user_id=current_admin.id)
+        if model_message:
+            return redirect(url_for('superadmin_settings', success=model_message))
         return redirect(url_for('superadmin_settings'))
 
-    return render_template('superadmin_settings.html', config=config, current_admin=get_current_admin())
+    return render_template(
+        'superadmin_settings.html',
+        config=config,
+        success=request.args.get('success'),
+        current_admin=get_current_admin()
+    )
 
 @app.route('/superadmin/reports')
 @role_required('superadmin')
@@ -3001,12 +3054,12 @@ def superadmin_reports():
 
     avg_lkg_tc = round(total_lkg_tc / lkg_tc_count, 2) if lkg_tc_count else 0
     avg_lkg_ha = round(total_tc_ha / tc_ha_count, 2) if tc_ha_count else 0
-    total_predicted_lkg = round(total_lkg, 2) if total_predictions else 0
+    total_estimated_lkg = round(total_lkg, 2) if total_predictions else 0
 
     report = {
         "avg_lkg_tc": avg_lkg_tc,
         "avg_lkg_ha": avg_lkg_ha,
-        "total_predicted_lkg": total_predicted_lkg,
+        "total_estimated_lkg": total_estimated_lkg,
         "total_predictions": total_predictions,
     }
 
