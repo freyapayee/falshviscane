@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <title>VISCANE | Model Updates</title>
+    <title>VISCANE | AI Models</title>
 </head>
 <body class="admin-layout">
     <div class="dashboard-bg"></div>
@@ -17,8 +17,8 @@
                     <img src="{{ url_for('static', filename='logo.jpg') }}" alt="VISCANE Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
                 </div>
                 <div>
-                    <p class="brand-title">Model Updates</p>
-                    <p class="brand-subtitle">Receive retrained models from superadmin</p>
+                    <p class="brand-title">AI Models</p>
+                    <p class="brand-subtitle">View the model currently deployed in VISCANE</p>
                 </div>
             </div>
             <div class="header-actions">
@@ -35,29 +35,26 @@
     </header>
 
     <main class="dashboard-container fade-in">
-        {% if message %}
-            <div class="form-success">{{ message }}</div>
-        {% endif %}
-
         <section class="panel">
             <div class="panel-header">
                 <div>
-                    <h3 class="panel-title">Deploy New Model</h3>
-                    <p class="panel-subtitle">Upload the latest model package</p>
+                    <h3 class="panel-title">Deployed Model</h3>
+                    <p class="panel-subtitle">The active model package used by the system</p>
                 </div>
             </div>
             <div class="stat-label">Current Model</div>
             <div class="stat-helper">{{ config.model_filename if config.model_filename else 'No model deployed yet.' }}</div>
-            <form method="POST" enctype="multipart/form-data">
-                <input class="stat-input" type="file" name="model_file" required>
-                <button class="btn primary" type="submit" style="margin-top: 12px;">
-                    <ion-icon name="cloud-upload-outline"></ion-icon>
-                    Upload Model
-                </button>
-            </form>
+            {% if current_admin and current_admin.role == 'superadmin' %}
+                <a class="btn primary" href="/superadmin/settings" style="margin-top: 12px;">
+                    <ion-icon name="settings-outline"></ion-icon>
+                    Manage Model
+                </a>
+            {% else %}
+                <div class="stat-helper" style="margin-top: 12px;">Model deployments are managed by a superadmin.</div>
+            {% endif %}
         </section>
 
-        <div class="footer-link">VISCANE Admin | Model Updates</div>
+        <div class="footer-link">VISCANE Admin | AI Models</div>
     </main>
 </body>
 </html>

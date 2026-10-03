@@ -1,5 +1,18 @@
 # VISCANE Setup
 
+## Django backend and Android app
+
+The Android app in `android/` uses the separately maintained Django backend.
+Clone it into this checkout before following [ANDROID.md](ANDROID.md):
+
+```bash
+git clone https://github.com/freyapayee/djangoviscane_final.git djangoviscane_final
+```
+
+The backend has its own Git repository. Commit and push backend changes from
+`djangoviscane_final/`; commit and push Android and Flask changes from this root.
+The Flask setup below is for the legacy application.
+
 This project supports two database modes:
 
 1. Shared hosted PostgreSQL for the whole team

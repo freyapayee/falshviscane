@@ -1,7 +1,11 @@
 package com.viscane.app
 
 import android.os.Bundle
+import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
@@ -9,10 +13,21 @@ import androidx.preference.PreferenceFragmentCompat
 class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!BuildConfig.DEBUG) { finish(); return }
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        val container = FrameLayout(this).apply { id = R.id.settings_container }
+        setContentView(container)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        ViewCompat.setOnApplyWindowInsetsListener(container) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            val keyboard = insets.getInsets(WindowInsetsCompat.Type.ime())
+            view.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, keyboard.bottom))
+            insets
+        }
+        if (savedInstanceState != null) return
         supportFragmentManager
             .beginTransaction()
-            .replace(android.R.id.content, SettingsFragment())
+            .replace(container.id, SettingsFragment())
             .commit()
     }
 
@@ -32,7 +47,7 @@ class SettingsActivity : AppCompatActivity() {
             }
             baseUrlPref?.setOnPreferenceChangeListener { _, newValue ->
                 val text = (newValue as? String).orEmpty().trim()
-                if (text.isBlank()) return@setOnPreferenceChangeListener false
+                if (!FarmerNavigation.validOrigin(text, true)) return@setOnPreferenceChangeListener false
                 val normalized = if (text.endsWith("/")) text else "$text/"
                 if (normalized != baseUrlPref?.text) {
                     baseUrlPref?.text = normalized

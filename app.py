@@ -323,20 +323,7 @@ CV_UPLOAD_RELATIVE_DIR = os.path.join("uploads", "cv_scans")
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('VISCANE_SECRET_KEY', 'change-this-key')
 
-<<<<<<< Updated upstream
-database_url = (
-    os.getenv('SQLALCHEMY_DATABASE_URI')
-    or os.getenv('DATABASE_URL')
-    or os.getenv('DATABASE_FALLBACK_URL')
-    or 'postgresql://user:password@localhost:5433/viscane_db'
-)
-if database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
-if not database_url.startswith('postgresql://'):
-    raise RuntimeError('This project is PostgreSQL-only. Set DATABASE_URL to a PostgreSQL connection string.')
-=======
 database_url = _resolve_database_url()
->>>>>>> Stashed changes
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -2507,13 +2494,14 @@ def admin_monitoring():
         })
     return render_template('admin_monitoring.html', rows=monitoring_rows, current_admin=get_current_admin())
 
-@app.route('/admin/models', methods=['GET', 'POST'])
+@app.route('/admin/models')
 @login_required
 def admin_models():
-    current_admin = get_current_admin()
-    if current_admin and current_admin.role == 'superadmin':
-        return redirect(url_for('superadmin_settings'))
-    return redirect(url_for('admin_portal'))
+    return render_template(
+        'admin_models.html',
+        config=get_system_config(),
+        current_admin=get_current_admin()
+    )
 
 @app.route('/admin/reports')
 @login_required

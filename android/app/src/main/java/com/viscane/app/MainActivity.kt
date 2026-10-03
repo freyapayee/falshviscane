@@ -1,8 +1,6 @@
 package com.viscane.app
 
-import android.app.DownloadManager
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -11,15 +9,24 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
+import android.view.KeyEvent
 import android.webkit.CookieManager
-import android.webkit.DownloadListener
 import android.webkit.PermissionRequest
-import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.ValueCallback
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebResourceResponse
+import android.webkit.WebResourceError
+import android.graphics.Bitmap
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.activity.OnBackPressedCallback
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import java.io.ByteArrayInputStream
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -34,6 +41,9 @@ import java.util.Locale
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var navigation: FarmerNavigation
+    private var activeBaseUrl = ""
+    private var loadFailed = false
 
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingCameraImageUri: Uri? = null
@@ -80,7 +90,7 @@ class MainActivity : AppCompatActivity() {
                 return@registerForActivityResult
             }
 
-            if (granted) {
+            if (granted && navigation.sameOrigin(request.origin.toString()) && navigation.allows(webView.url.orEmpty())) {
                 request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
             } else {
                 request.deny()
@@ -90,18 +100,49 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        supportActionBar?.hide()
 
         swipeRefresh = findViewById(R.id.swipeRefresh)
         webView = findViewById(R.id.webView)
+        activeBaseUrl = getBaseUrl()
+        navigation = FarmerNavigation(activeBaseUrl)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        ViewCompat.setOnApplyWindowInsetsListener(swipeRefresh) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            val keyboard = insets.getInsets(WindowInsetsCompat.Type.ime())
+            view.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, keyboard.bottom))
+            insets
+        }
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                webView.evaluateJavascript("""
+                    (() => {
+                        const overlay = document.getElementById('camera-overlay');
+                        if (overlay?.classList.contains('is-active')) {
+                            document.getElementById('close-camera-btn')?.click();
+                            return true;
+                        }
+                        return false;
+                    })()
+                """.trimIndent()) { closedDialog ->
+                    if (closedDialog != "true") {
+                        if (webView.canGoBack()) webView.goBack() else finish()
+                    }
+                }
+            }
+        })
 
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
         webView.settings.setSupportZoom(true)
         webView.settings.builtInZoomControls = true
         webView.settings.displayZoomControls = false
-        webView.settings.allowFileAccess = true
+        webView.settings.allowFileAccess = false
         webView.settings.allowContentAccess = true
         webView.settings.mediaPlaybackRequiresUserGesture = false
+        webView.settings.userAgentString += " ViscaneFarmer/1.0"
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
+        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
@@ -109,6 +150,7 @@ class MainActivity : AppCompatActivity() {
                 filePathCallback: ValueCallback<Array<Uri>>,
                 fileChooserParams: FileChooserParams
             ): Boolean {
+                if (!navigation.allows(this@MainActivity.webView.url.orEmpty())) return false
                 this@MainActivity.filePathCallback?.onReceiveValue(null)
                 this@MainActivity.filePathCallback = filePathCallback
                 pendingCameraImageUri = null
@@ -126,7 +168,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPermissionRequest(request: PermissionRequest) {
                 val wantsVideo = request.resources.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE)
-                if (!wantsVideo) {
+                if (!wantsVideo || !navigation.sameOrigin(request.origin.toString()) || !navigation.allows(webView.url.orEmpty())) {
                     request.deny()
                     return
                 }
@@ -140,47 +182,85 @@ class MainActivity : AppCompatActivity() {
                 pendingWebPermissionRequest = request
                 cameraPermissionForChooserLauncher.launch(Manifest.permission.CAMERA)
             }
+
+            override fun onPermissionRequestCanceled(request: PermissionRequest) {
+                if (pendingWebPermissionRequest == request) pendingWebPermissionRequest = null
+            }
         }
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                return false
+                if (navigation.allows(request.url.toString())) return false
+                if (request.isForMainFrame) Toast.makeText(this@MainActivity, "This app provides farmer services only.", Toast.LENGTH_SHORT).show()
+                return true
+            }
+
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                val url = request.url.toString()
+                if ((request.isForMainFrame || navigation.sameOrigin(url)) && !navigation.allows(url)) {
+                    return WebResourceResponse("text/plain", "UTF-8", 403, "Forbidden", emptyMap(),
+                        ByteArrayInputStream("Farmer portal only".toByteArray()))
+                }
+                return null
+            }
+
+            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                loadFailed = false
+                if (!navigation.allows(url)) {
+                    view.stopLoading()
+                    view.loadUrl(activeBaseUrl)
+                }
+            }
+
+            override fun onPageFinished(view: WebView, url: String) {
+                swipeRefresh.isRefreshing = false
+            }
+
+            override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                if (request.isForMainFrame) showLoadError()
+            }
+
+            override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
+                if (request.isForMainFrame) {
+                    val message = if (BuildConfig.DEBUG && response.statusCode == 400) {
+                        "The server rejected the request (HTTP 400). Check Django's DJANGO_ALLOWED_HOSTS includes ${request.url.host}, then restart the server."
+                    } else {
+                        "The server returned HTTP ${response.statusCode}. Try again or contact support."
+                    }
+                    showLoadError("Server error", message)
+                }
             }
         }
 
-        webView.setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-            val request = DownloadManager.Request(Uri.parse(url))
-            val filename = URLUtil.guessFileName(url, contentDisposition, mimeType)
-            val cookies = CookieManager.getInstance().getCookie(url)
-            if (!cookies.isNullOrBlank()) {
-                request.addRequestHeader("Cookie", cookies)
-            }
-            request.addRequestHeader("User-Agent", userAgent)
-            request.setMimeType(mimeType)
-            request.setTitle(filename)
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-
-            val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            downloadManager.enqueue(request)
-        })
-
         swipeRefresh.setOnRefreshListener { webView.reload() }
+        swipeRefresh.setOnChildScrollUpCallback { _, _ -> webView.canScrollVertically(-1) }
 
-        webView.loadUrl(getBaseUrl())
+        if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) webView.loadUrl(activeBaseUrl)
     }
 
     override fun onResume() {
         super.onResume()
-        val currentUrl = webView.url
         val baseUrl = getBaseUrl()
-        if (currentUrl == null || !currentUrl.startsWith(baseUrl)) {
+        if (activeBaseUrl != baseUrl) {
+            CookieManager.getInstance().removeAllCookies(null)
+            activeBaseUrl = baseUrl
+            navigation = FarmerNavigation(baseUrl)
+            webView.clearHistory()
             webView.loadUrl(baseUrl)
         }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
+        if (BuildConfig.DEBUG) menuInflater.inflate(R.menu.main_menu, menu)
         return true
+    }
+
+    // Keep development server settings accessible without a title bar.
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (BuildConfig.DEBUG && keyCode == KeyEvent.KEYCODE_MENU) {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -189,27 +269,43 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, SettingsActivity::class.java))
                 true
             }
-            R.id.action_open_external -> {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(getBaseUrl())))
-                true
-            }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
-    override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            @Suppress("DEPRECATION")
-            super.onBackPressed()
-        }
+    override fun onSaveInstanceState(outState: Bundle) {
+        webView.saveState(outState)
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        filePathCallback?.onReceiveValue(null)
+        filePathCallback = null
+        pendingWebPermissionRequest?.deny()
+        pendingWebPermissionRequest = null
+        webView.destroy()
+        super.onDestroy()
+    }
+
+    private fun showLoadError(
+        title: String = "Unable to connect",
+        message: String = "Check your internet connection and try again."
+    ) {
+        swipeRefresh.isRefreshing = false
+        if (loadFailed || isFinishing) return
+        loadFailed = true
+        AlertDialog.Builder(this).setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("Retry") { _, _ -> webView.reload() }
+            .setNegativeButton("Close", null).show()
     }
 
     private fun getBaseUrl(): String {
+        if (!BuildConfig.DEBUG) return BuildConfig.FARMER_BASE_URL
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         val raw = prefs.getString(SettingsActivity.KEY_BASE_URL, SettingsActivity.DEFAULT_BASE_URL) ?: ""
         val trimmed = raw.trim()
+        if (!FarmerNavigation.validOrigin(trimmed, true)) return SettingsActivity.DEFAULT_BASE_URL
         return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
     }
 
@@ -218,14 +314,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun shouldOfferCamera(params: WebChromeClient.FileChooserParams): Boolean {
-        if (params.isCaptureEnabled) {
-            return true
-        }
-        val acceptTypes = params.acceptTypes?.filter { !it.isNullOrBlank() } ?: emptyList()
-        if (acceptTypes.isEmpty()) {
-            return false
-        }
-        return acceptTypes.any { it.startsWith("image/") }
+        return params.isCaptureEnabled
     }
 
     private fun launchFileChooser(params: WebChromeClient.FileChooserParams, allowCamera: Boolean) {
@@ -256,7 +345,7 @@ class MainActivity : AppCompatActivity() {
             }
 
         // For an image capture request, go straight to the device camera instead of opening a file manager.
-        if ((params.isCaptureEnabled || allowCamera) && cameraIntent != null) {
+        if (params.isCaptureEnabled && cameraIntent != null) {
             fileChooserLauncher.launch(cameraIntent)
             return
         }
@@ -300,7 +389,7 @@ class MainActivity : AppCompatActivity() {
     private fun createTempImageFile(): File? {
         return try {
             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: cacheDir
+            val storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: File(cacheDir, "camera").apply { mkdirs() }
             File.createTempFile("VISCANE_${timeStamp}_", ".jpg", storageDir)
         } catch (_: Exception) {
             null
